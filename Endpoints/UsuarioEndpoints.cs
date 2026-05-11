@@ -14,9 +14,28 @@ public static class UsuarioEndpoints
 
         group.MapPost("/", async (Usuario u, AppDbContext db) => {
             var existe = await db.Usuarios.AnyAsync(user => user.NomeUsuario == u.NomeUsuario);
-            if (existe) return Results.Conflict();
+            if (existe) return Results.Conflict("Usuário já cadastrado.");
+
+            u.Pontos = 0;
+            u.Moedas = 100;
+            u.Vitorias = 0;
+            u.Derrotas = 0;
+            u.PinBatalha = 0;
+
             db.Usuarios.Add(u);
             await db.SaveChangesAsync();
+
+            var idsCartasIniciais = new List<int> { 4, 4, 5, 6, 7, 8, 8, 9, 9, 10 };
+
+            var itensInventario = idsCartasIniciais.Select(idCarta => new Inventario
+            {
+                IdUsuario = u.IdUsuario,
+                IdCarta = idCarta
+            });
+
+            db.Inventarios.AddRange(itensInventario);
+            await db.SaveChangesAsync();
+
             return Results.Created($"/usuarios/{u.IdUsuario}", u);
         });
 

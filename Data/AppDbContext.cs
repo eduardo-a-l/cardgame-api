@@ -30,18 +30,18 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Nome).IsRequired().HasColumnType("varchar(50)");
             entity.Property(c => c.Tipo).IsRequired().HasColumnType("varchar(30)");
             entity.Property(c => c.Raridade).HasColumnType("varchar(20)");
-            entity.Property(c => c.Preco).HasColumnName("preco");
+            entity.Property(c => c.PrecoPadrao).HasColumnName("precopadrao");
         });
 
         modelBuilder.Entity<Usuario>(entity => {
             entity.HasKey(u => u.IdUsuario);
             entity.Property(u => u.NomeUsuario).HasColumnType("varchar(50)");
             entity.Property(u => u.Senha).HasColumnType("varchar(10)");
-            entity.Property(u => u.Pontos).HasDefaultValue(0);
-            entity.Property(u => u.Moedas).HasDefaultValue(0);
-            entity.Property(u => u.Vitorias).HasDefaultValue(0);
-            entity.Property(u => u.Derrotas).HasDefaultValue(0);
-            entity.Property(u => u.PinBatalha).HasDefaultValue(0);
+            entity.Property(u => u.Pontos).HasDefaultValue(0).IsRequired();
+            entity.Property(u => u.Moedas).HasDefaultValue(0).IsRequired();
+            entity.Property(u => u.Vitorias).HasDefaultValue(0).IsRequired();
+            entity.Property(u => u.Derrotas).HasDefaultValue(0).IsRequired();
+            entity.Property(u => u.PinBatalha).HasDefaultValue(0).IsRequired();
         });
 
         modelBuilder.Entity<Inventario>(entity => {
@@ -56,7 +56,7 @@ public class AppDbContext : DbContext
 
             entity.Property(l => l.IdLojaItem).HasColumnName("idlojaitem");
             entity.Property(l => l.IdCarta).HasColumnName("idcarta");
-            entity.Property(l => l.Preco).HasColumnName("preco").IsRequired();
+            entity.Property(l => l.Desconto).HasColumnName("desconto").IsRequired();
             entity.Property(l => l.EhOferta).HasColumnName("ehoferta").HasDefaultValue(false);
             entity.Property(l => l.Ativo).HasColumnName("ativo");
 

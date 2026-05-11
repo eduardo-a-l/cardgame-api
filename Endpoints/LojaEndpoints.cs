@@ -27,47 +27,54 @@ public static class LojaEndpoints
         group.MapPost("/comprar/{userId}/{idLojaItem}", async (int userId, int idLojaItem, AppDbContext db) =>
         {
             var user = await db.Usuarios.FindAsync(userId);
-            var item = await db.LojaItens.Include(l => l.Carta).FirstOrDefaultAsync(l => l.IdLojaItem == idLojaItem);
+            var item = await db.LojaItens
+                .Include(l => l.Carta)
+                .FirstOrDefaultAsync(l => l.IdLojaItem == idLojaItem);
 
             if (user == null || item == null) return Results.NotFound("Usuário ou Item não encontrado.");
 
-            if (user.Moedas < item.Preco) return Results.BadRequest("Saldo insuficiente.");
+            decimal precoPadrao = item.Carta?.PrecoPadrao ?? 0;
+            decimal percentualDesconto = item.Desconto ?? 0;
 
-            if (item.EhOferta)
+            decimal valorComDesconto = precoPadrao * (1 - percentualDesconto);
+            int precoFinal = (int)Math.Floor(valorComDesconto);
+
+            if (user.Moedas < precoFinal)
+                return Results.BadRequest($"Saldo insuficiente. Custo: {precoFinal} moedas.");
+
+            if (item.EhOferta == true)
             {
                 var jaComprou = await db.ComprasUsuarios.AnyAsync(c => c.IdUsuario == userId && c.IdLojaItem == idLojaItem);
-                if (jaComprou) return Results.Conflict("Você já adquiriu esta oferta.");
+                if (jaComprou) return Results.Conflict("Você já adquiriu esta oferta única.");
             }
 
             using var transaction = await db.Database.BeginTransactionAsync();
             try
             {
-                user.Moedas -= item.Preco;
+                user.Moedas -= precoFinal;
 
-                db.Inventarios.Add(new Inventario 
-                { 
-                    IdUsuario = userId, 
-                    IdCarta = item.IdCarta 
+                db.Inventarios.Add(new Inventario
+                {
+                    IdUsuario = userId,
+                    IdCarta = item.IdCarta
                 });
 
-                if (item.EhOferta)
+                db.ComprasUsuarios.Add(new CompraUsuario
                 {
-                    db.ComprasUsuarios.Add(new CompraUsuario 
-                    { 
-                        IdUsuario = userId, 
-                        IdLojaItem = idLojaItem 
-                    });
-                }
+                    IdUsuario = userId,
+                    IdLojaItem = idLojaItem,
+                    DataCompra = DateTime.Now
+                });
 
                 await db.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return Results.Ok(new { Mensagem = "Compra realizada com sucesso!", NovoSaldo = user.Moedas });
+                return Results.Ok(new { Mensagem = "Compra realizada.", PrecoPago = precoFinal, NovoSaldo = user.Moedas });
             }
             catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return Results.Problem("Erro ao processar a compra.");
+                return Results.Problem("Erro ao processar a transação no banco.");
             }
         });
     }
