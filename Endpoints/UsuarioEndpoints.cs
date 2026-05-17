@@ -7,10 +7,6 @@ namespace CardGameApi.Endpoints;
 public static class UsuarioEndpoints
 {
 
-    public class PinUpdateDto
-    {
-        public int PinBatalha { get; set; } = 0;
-    }
 
     public static void MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
     {
@@ -68,12 +64,12 @@ public static class UsuarioEndpoints
             return Results.Ok(new { user.Pontos, user.Moedas, user.Vitorias, user.Derrotas, user.PinBatalha });
         });
 
-        group.MapPatch("/{id}/pinBatalha", async (int id, PinUpdateDto dto, AppDbContext db) =>
+        group.MapPatch("/{id}/pinBatalha", async (int id, int novoPin, AppDbContext db) =>
         {
             var user = await db.Usuarios.FindAsync(id);
             if (user is null) return Results.NotFound();
 
-            user.PinBatalha = dto.PinBatalha;
+            user.PinBatalha = novoPin;
             await db.SaveChangesAsync();
 
             return Results.NoContent();
