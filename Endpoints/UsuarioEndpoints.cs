@@ -65,7 +65,17 @@ public static class UsuarioEndpoints
         {
             var user = await db.Usuarios.FindAsync(id);
             if (user is null) return Results.NotFound();
-            return Results.Ok(new { user.Pontos, user.Moedas, user.Vitorias, user.Derrotas, user.PinBatalha });
+
+            return Results.Ok(new
+            {
+                user.IdUsuario,
+                user.NomeUsuario,
+                user.Pontos,
+                user.Moedas,
+                user.Vitorias,
+                user.Derrotas,
+                user.PinBatalha
+            });
         });
 
         group.MapPatch("/{id}/pinBatalha", async (int id, PinUpdateDto dto, AppDbContext db) =>
