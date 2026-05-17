@@ -77,5 +77,48 @@ public static class LojaEndpoints
                 return Results.Problem("Erro ao processar a transação no banco.");
             }
         });
+
+        group.MapPost("/vender/{userId}/{idCarta}", async (int userId, int idCarta, AppDbContext db) =>
+        {
+            var user = await db.Usuarios.FindAsync(userId);
+            if (user == null) return Results.NotFound("Usuário não encontrado.");
+
+            var itemInventario = await db.Inventarios
+                .Include(i => i.Carta)
+                .FirstOrDefaultAsync(i => i.IdUsuario == userId && i.IdCarta == idCarta);
+
+            if (itemInventario == null || itemInventario.Carta == null)
+                return Results.BadRequest(new { Mensagem = "Você não possui essa carta no inventário." });
+
+            var estaEmUso = await db.Baralhos
+                .AnyAsync(b => b.Inventarios.Any(i => i.IdInventario == itemInventario.IdInventario));
+
+            if (estaEmUso)
+                return Results.BadRequest(new { Mensagem = "Esta carta não pode ser vendida pois está equipada em um de seus baralhos." });
+
+            decimal precoPadrao = itemInventario.Carta.PrecoPadrao;
+            int valorVenda = (int)Math.Floor(precoPadrao * 0.5m);
+
+            using var transaction = await db.Database.BeginTransactionAsync();
+            try
+            {
+                user.Moedas += valorVenda;
+                db.Inventarios.Remove(itemInventario);
+                await db.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Results.Ok(new
+                {
+                    Mensagem = "Carta vendida com sucesso!",
+                    ValorRecebido = valorVenda,
+                    NovoSaldo = user.Moedas
+                });
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return Results.Problem("Erro ao processar a venda.");
+            }
+        });
     }
 }
