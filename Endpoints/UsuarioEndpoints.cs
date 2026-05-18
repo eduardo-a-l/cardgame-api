@@ -97,7 +97,6 @@ public static class UsuarioEndpoints
             vencedor.Vitorias += 1;
 
             perdedor.Derrotas += 1;
-            // Perdedor ganha uma pequena consolação de moedas?
             perdedor.Moedas += 10;
 
             await db.SaveChangesAsync();
