@@ -16,7 +16,7 @@ public static class UsuarioEndpoints
 
         group.MapPost("/", async (Usuario u, AppDbContext db) => {
             var existe = await db.Usuarios.AnyAsync(user => user.NomeUsuario == u.NomeUsuario);
-            if (existe) return Results.Conflict("Usu�rio j� cadastrado.");
+            if (existe) return Results.Conflict("Usu�rio j� cadastrado.");
 
             u.Pontos = 0;
             u.Moedas = 100;
@@ -84,5 +84,27 @@ public static class UsuarioEndpoints
 
             return Results.NoContent();
         });
+
+        group.MapPut("/resultado-batalha", async (ResultadoBatalhaDto resultado, AppDbContext db) =>
+        {
+            var vencedor = await db.Usuarios.FindAsync(resultado.IdVencedor);
+            var perdedor = await db.Usuarios.FindAsync(resultado.IdPerdedor);
+
+            if (vencedor == null || perdedor == null) return Results.NotFound("Um ou ambos os usuários não foram encontrados.");
+
+            vencedor.Pontos += 10;
+            vencedor.Moedas += 50;
+            vencedor.Vitorias += 1;
+
+            perdedor.Derrotas += 1;
+            // Perdedor ganha uma pequena consolação de moedas?
+            perdedor.Moedas += 10;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { Mensagem = "Resultado processado com sucesso!" });
+        });
     }
 }
+
+public record ResultadoBatalhaDto(int IdVencedor, int IdPerdedor);
