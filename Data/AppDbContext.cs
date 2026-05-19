@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Tipo).IsRequired().HasColumnType("varchar(30)");
             entity.Property(c => c.Raridade).HasColumnType("varchar(20)");
             entity.Property(c => c.PrecoPadrao).HasColumnName("precopadrao");
+            entity.Property(c => c.Vida).HasColumnName("Vida");
+            entity.Property(c => c.Acao1).HasColumnType("varchar(255)").HasColumnName("Acao1");
+            entity.Property(c => c.Acao2).HasColumnType("varchar(255)").HasColumnName("Acao2");
         });
 
         modelBuilder.Entity<Usuario>(entity => {
