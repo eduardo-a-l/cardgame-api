@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Tipo).IsRequired().HasColumnType("varchar(30)");
             entity.Property(c => c.Raridade).HasColumnType("varchar(20)");
             entity.Property(c => c.PrecoPadrao).HasColumnName("precopadrao");
+            entity.Property(c => c.Vida).HasColumnName("Vida");
+            entity.Property(c => c.Acao1).HasColumnType("varchar(255)").HasColumnName("Acao1");
+            entity.Property(c => c.Acao2).HasColumnType("varchar(255)").HasColumnName("Acao2");
         });
 
         modelBuilder.Entity<Usuario>(entity => {
@@ -47,7 +50,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Inventario>(entity => {
             entity.HasKey(i => i.IdInventario);
             entity.HasOne(i => i.Carta).WithMany().HasForeignKey(i => i.IdCarta);
-            entity.HasOne(i => i.Usuario).WithMany().HasForeignKey(i => i.IdUsuario);
+            entity.HasOne(i => i.Usuario).WithMany().HasForeignKey(i => i.IdUsuario).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LojaItem>(entity => {
@@ -76,7 +79,8 @@ public class AppDbContext : DbContext
 
             entity.HasOne(c => c.Usuario)
                 .WithMany()
-                .HasForeignKey(c => c.IdUsuario);
+                .HasForeignKey(c => c.IdUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(c => c.LojaItem)
                 .WithMany()
@@ -90,7 +94,8 @@ public class AppDbContext : DbContext
 
             entity.HasOne<Usuario>()
                 .WithMany(u => u.Baralhos)
-                .HasForeignKey(b => b.idUsuario);
+                .HasForeignKey(b => b.idUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(b => b.Inventarios)
                 .WithMany()

@@ -103,6 +103,26 @@ public static class UsuarioEndpoints
 
             return Results.Ok(new { Mensagem = "Resultado processado com sucesso!" });
         });
+
+        group.MapDelete("/{id}", async (int id, AppDbContext db) =>
+        {
+            var user = await db.Usuarios.FindAsync(id);
+            if (user is null) return Results.NotFound();
+
+            var inventarios = await db.Inventarios.Where(i => i.IdUsuario == id).ToListAsync();
+            db.Inventarios.RemoveRange(inventarios);
+
+            var baralhos = await db.Baralhos.Where(b => b.idUsuario == id).ToListAsync();
+            db.Baralhos.RemoveRange(baralhos);
+
+            var compras = await db.ComprasUsuarios.Where(c => c.IdUsuario == id).ToListAsync();
+            db.ComprasUsuarios.RemoveRange(compras);
+
+            db.Usuarios.Remove(user);
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        });
     }
 }
 
