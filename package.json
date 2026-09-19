@@ -18,6 +18,7 @@
     "express-ejs-layouts": "^2.5.1",
     "mssql": "^12.7.2",
     "mssql2": "^3.3.1",
+    "multer": "^2.4.0",
     "mysql2": "^3.14.3",
     "nodemon": "^3.1.10"
   }

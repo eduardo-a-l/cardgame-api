@@ -12,6 +12,8 @@ aplicacao.use(
 
 aplicacao.use(express.json());
 
+aplicacao.use("/uploads", express.static("uploads"));
+
 const rotasCarta = require("../app/routes/cartaRoutes");
 const rotasUsuario = require("../app/routes/usuarioRoutes");
 const rotasLoja = require("../app/routes/lojaRoutes");

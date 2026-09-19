@@ -2,6 +2,8 @@ const UsuarioController = require("../controller/usuarioController");
 
 const obj_UsuarioController = new UsuarioController();
 
+const upload = require("../middleware/upload");
+
 module.exports = (aplicacao) => {
 
     aplicacao.use((request, response, next) => {
@@ -50,6 +52,12 @@ module.exports = (aplicacao) => {
     aplicacao.delete(
         "/Usuarios/:id",
         obj_UsuarioController.excluirUsuario()
+    );
+
+    aplicacao.patch(
+        "/Usuarios/:id/foto",
+        upload.single("foto"),
+        obj_UsuarioController.atualizarFotoPerfil()
     );
 
 };

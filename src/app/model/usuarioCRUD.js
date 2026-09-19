@@ -41,24 +41,25 @@ class UsuarioCRUD
     {
         return new Promise((resolve, reject) =>
         {
-            var sqlExiste =
-                "SELECT * FROM CARDGAME.USUARIO " +
-                "WHERE NOMEUSUARIO = '" + usuario.nomeUsuario + "'";
-
-            console.log(sqlExiste);
-
-            this._db.then((pool) =>
+            this._db.then(async (pool) =>
             {
-                pool.request().query(sqlExiste, function(erro, resultados)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Erro ao verificar usuário existente");
-                    }
+                const transacao = new mssql.Transaction(pool);
 
-                    if (resultados.recordset.length > 0)
+                try
+                {
+                    await transacao.begin();
+
+                    var sqlExiste =
+                        "SELECT * FROM CARDGAME.USUARIO " +
+                        "WHERE NOMEUSUARIO = '" + usuario.nomeUsuario + "'";
+
+                    console.log(sqlExiste);
+
+                    var resultadoExiste = await transacao.request().query(sqlExiste);
+
+                    if (resultadoExiste.recordset.length > 0)
                     {
+                        await transacao.rollback();
                         return reject("Usuário já cadastrado");
                     }
 
@@ -78,47 +79,52 @@ class UsuarioCRUD
 
                     console.log("INSERT na tabela usuario = " + sqlInsere);
 
-                    pool.request().query(sqlInsere, function(erro, resultadoUsuario)
+                    var resultadoUsuario =
+                        await transacao.request().query(sqlInsere);
+
+                    var usuarioInserido =
+                        resultadoUsuario.recordset[0];
+
+                    var sqlInventario =
+                        "INSERT INTO CARDGAME.INVENTARIO " +
+                        "(IDUSUARIO, IDCARTA) VALUES " +
+                        "(" + usuarioInserido.idUsuario + ",4)," +
+                        "(" + usuarioInserido.idUsuario + ",4)," +
+                        "(" + usuarioInserido.idUsuario + ",5)," +
+                        "(" + usuarioInserido.idUsuario + ",6)," +
+                        "(" + usuarioInserido.idUsuario + ",7)," +
+                        "(" + usuarioInserido.idUsuario + ",8)," +
+                        "(" + usuarioInserido.idUsuario + ",8)," +
+                        "(" + usuarioInserido.idUsuario + ",9)," +
+                        "(" + usuarioInserido.idUsuario + ",9)," +
+                        "(" + usuarioInserido.idUsuario + ",10)";
+
+                    console.log(
+                        "INSERT das cartas iniciais no inventário = " +
+                        sqlInventario
+                    );
+
+                    await transacao.request().query(sqlInventario);
+
+                    await transacao.commit();
+
+                    resolve(usuarioInserido);
+                }
+                catch (erro)
+                {
+                    console.log(erro);
+
+                    try
                     {
-                        if (erro)
-                        {
-                            console.log(erro);
-                            return reject("Inclusão de novo usuário está com erro");
-                        }
+                        await transacao.rollback();
+                    }
+                    catch (erroRollback)
+                    {
+                        console.log(erroRollback);
+                    }
 
-                        var usuarioInserido = resultadoUsuario.recordset[0];
-
-                        var sqlInventario =
-                            "INSERT INTO CARDGAME.INVENTARIO " +
-                            "(IDUSUARIO, IDCARTA) VALUES " +
-                            "(" + usuarioInserido.IDUSUARIO + ",4)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",4)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",5)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",6)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",7)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",8)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",8)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",9)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",9)," +
-                            "(" + usuarioInserido.IDUSUARIO + ",10)";
-
-                        console.log(
-                            "INSERT das cartas iniciais no inventário = " +
-                            sqlInventario
-                        );
-
-                        pool.request().query(sqlInventario, function(erro)
-                        {
-                            if (erro)
-                            {
-                                console.log(erro);
-                                return reject("Erro ao inserir cartas iniciais no inventário");
-                            }
-
-                            resolve(usuarioInserido);
-                        });
-                    });
-                });
+                    reject("Inclusão de novo usuário está com erro");
+                }
             }).catch((erro) =>
             {
                 console.log(erro);
@@ -170,7 +176,7 @@ class UsuarioCRUD
         return new Promise((resolve, reject) =>
         {
             var sql =
-                "SELECT IDUSUARIO, NOMEUSUARIO, PONTOS, MOEDAS " +
+                "SELECT IDUSUARIO, NOMEUSUARIO, PONTOS, MOEDAS, FOTOPERFIL " +
                 "FROM CARDGAME.USUARIO " +
                 "ORDER BY PONTOS DESC";
 
@@ -203,7 +209,7 @@ class UsuarioCRUD
         {
             var sql =
                 "SELECT IDUSUARIO, NOMEUSUARIO, PONTOS, MOEDAS, " +
-                "VITORIAS, DERROTAS, PINBATALHA " +
+                "VITORIAS, DERROTAS, PINBATALHA, FOTOPERFIL " +
                 "FROM CARDGAME.USUARIO " +
                 "WHERE IDUSUARIO = " + id;
 
@@ -367,6 +373,15 @@ class UsuarioCRUD
                     }
 
                     await transacao.request().query(
+                        "DELETE FROM CARDGAME.Carta_Baralho " +
+                        "WHERE idInventario IN (" +
+                        "SELECT IDINVENTARIO " +
+                        "FROM CARDGAME.INVENTARIO " +
+                        "WHERE IDUSUARIO = " + id +
+                        ")"
+                    );
+
+                    await transacao.request().query(
                         "DELETE FROM CARDGAME.INVENTARIO " +
                         "WHERE IDUSUARIO = " + id
                     );
@@ -405,6 +420,42 @@ class UsuarioCRUD
 
                     reject("Exclusão do usuário está com erro");
                 }
+            }).catch((erro) =>
+            {
+                console.log(erro);
+                reject("Erro na conexão com o banco de dados");
+            });
+        });
+    }
+
+    atualizaFotoPerfil(id, caminho)
+    {
+        return new Promise((resolve, reject) =>
+        {
+            var sql =
+                "UPDATE CARDGAME.USUARIO SET " +
+                "FOTOPERFIL = '" + caminho + "' " +
+                "WHERE IDUSUARIO = " + id;
+
+            console.log(sql);
+
+            this._db.then((pool) =>
+            {
+                pool.request().query(sql, function(erro, resultados)
+                {
+                    if (erro)
+                    {
+                        console.log(erro);
+                        return reject("Atualização da foto de perfil falhou");
+                    }
+
+                    if (resultados.rowsAffected[0] === 0)
+                    {
+                        return reject("Usuário não encontrado");
+                    }
+
+                    resolve();
+                });
             }).catch((erro) =>
             {
                 console.log(erro);

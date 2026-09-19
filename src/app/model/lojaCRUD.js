@@ -66,14 +66,21 @@ class LojaCRUD
                     await transacao.begin();
 
                     var resultadoUsuario = await transacao.request().query(
-                        "SELECT * FROM CARDGAME.USUARIO " +
+                        "SELECT " +
+                        "IDUSUARIO AS IDUSUARIO, " +
+                        "MOEDAS AS MOEDAS " +
+                        "FROM CARDGAME.USUARIO " +
                         "WHERE IDUSUARIO = " + userId
                     );
 
                     var resultadoItem = await transacao.request().query(
                         "SELECT " +
-                        "L.*, " +
-                        "C.PRECOPADRAO " +
+                        "L.IDLOJAITEM AS IDLOJAITEM, " +
+                        "L.IDCARTA AS IDCARTA, " +
+                        "L.DESCONTO AS DESCONTO, " +
+                        "L.EHOFERTA AS EHOFERTA, " +
+                        "L.ATIVO AS ATIVO, " +
+                        "C.PRECOPADRAO AS PRECOPADRAO " +
                         "FROM CARDGAME.LOJAITEM L " +
                         "INNER JOIN CARDGAME.CARTA C " +
                         "ON L.IDCARTA = C.IDCARTA " +
@@ -218,6 +225,19 @@ class LojaCRUD
                     }
 
                     var inventario = resultadoInventario.recordset[0];
+
+                    var resultadoUso = await transacao.request().query(
+                        "SELECT * FROM CARDGAME.Carta_Baralho " +
+                        "WHERE idInventario = " + inventario.IDINVENTARIO
+                    );
+
+                    if (resultadoUso.recordset.length > 0)
+                    {
+                        await transacao.rollback();
+                        return reject(
+                            "Esta carta não pode ser vendida pois está equipada em um de seus baralhos"
+                        );
+                    }
 
                     var precoPadrao = inventario.PRECOPADRAO;
                     var valorVenda = Math.floor(precoPadrao * 0.5);

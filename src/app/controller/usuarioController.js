@@ -274,6 +274,47 @@ class UsuarioController
         };
     }
 
+    atualizarFotoPerfil()
+    {
+        return function(request, response)
+        {
+            const id = request.params.id;
+
+            if (!request.file)
+            {
+                return response.status(400).json({
+                    erro: "Nenhuma imagem foi enviada"
+                });
+            }
+
+            const caminho = "/uploads/perfis/" + request.file.filename;
+
+            const usuarioCRUD = new UsuarioCRUD(db);
+
+            usuarioCRUD
+                .atualizaFotoPerfil(id, caminho)
+                .then(() =>
+                {
+                    response.status(200).json({
+                        FotoPerfil: caminho
+                    });
+                })
+                .catch((erro) =>
+                {
+                    console.log(erro);
+
+                    if (erro === "Usuário não encontrado")
+                    {
+                        return response.status(404).end();
+                    }
+
+                    response.status(500).json({
+                        erro: "Erro ao atualizar foto de perfil"
+                    });
+                });
+        };
+    }
+
 }
 
 module.exports = UsuarioController;
