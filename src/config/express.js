@@ -12,8 +12,14 @@ aplicacao.use(
 
 aplicacao.use(express.json());
 
-const rotas = require("../app/routes/cartaRoutes");
+const rotasCarta = require("../app/routes/cartaRoutes");
+const rotasUsuario = require("../app/routes/usuarioRoutes");
+const rotasLoja = require("../app/routes/lojaRoutes");
+const rotasBaralho = require("../app/routes/baralhoRoutes");
 
-rotas(aplicacao);
+rotasCarta(aplicacao);
+rotasUsuario(aplicacao);
+rotasLoja(aplicacao);
+rotasBaralho(aplicacao);
 
 module.exports = aplicacao;

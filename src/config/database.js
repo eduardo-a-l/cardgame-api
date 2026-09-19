@@ -17,11 +17,11 @@ const conexao = mssql.connect(configuracao);
 
 conexao
     .then(() => {
-        console.log("Conexão com o bd sqlserver realizada com sucesso");
+        console.log("Conexão com o BD SQLServer realizada com sucesso");
     })
     .catch((erro) => {
         console.error(
-            "Erro na conexão com o bd sqlserver:",
+            "Erro na conexão com o BD SQLServer:",
             erro
         );
     });
