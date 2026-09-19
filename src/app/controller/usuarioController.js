@@ -287,26 +287,62 @@ class UsuarioController
                 });
             }
 
-            const caminho = "/uploads/perfis/" + request.file.filename;
+            const caminhoNovo = "/uploads/perfis/" + request.file.filename;
 
             const usuarioCRUD = new UsuarioCRUD(db);
 
             usuarioCRUD
-                .atualizaFotoPerfil(id, caminho)
-                .then(() =>
+                .consultaFotoPerfil(id)
+                .then((resultado) =>
                 {
+                    if (resultado.recordset.length === 0)
+                    {
+                        return response.status(404).end();
+                    }
+
+                    const caminhoAntigo = resultado.recordset[0].FOTOPERFIL;
+
+                    return usuarioCRUD
+                        .atualizaFotoPerfil(id, caminhoNovo)
+                        .then(() =>
+                        {
+                            return {
+                                caminhoAntigo: caminhoAntigo,
+                                caminhoNovo: caminhoNovo
+                            };
+                        });
+                })
+                .then((resultado) =>
+                {
+                    if (!resultado)
+                    {
+                        return;
+                    }
+
+                    if (
+                        resultado.caminhoAntigo &&
+                        resultado.caminhoAntigo !== resultado.caminhoNovo
+                    )
+                    {
+                        const fs = require("fs");
+                        const caminhoArquivo = resultado.caminhoAntigo.replace(
+                            "/uploads/",
+                            "uploads/"
+                        );
+
+                        if (fs.existsSync(caminhoArquivo))
+                        {
+                            fs.unlinkSync(caminhoArquivo);
+                        }
+                    }
+
                     response.status(200).json({
-                        FotoPerfil: caminho
+                        FOTOPERFIL: resultado.caminhoNovo
                     });
                 })
                 .catch((erro) =>
                 {
                     console.log(erro);
-
-                    if (erro === "Usuário não encontrado")
-                    {
-                        return response.status(404).end();
-                    }
 
                     response.status(500).json({
                         erro: "Erro ao atualizar foto de perfil"
