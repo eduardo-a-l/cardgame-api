@@ -12,6 +12,27 @@ aplicacao.use(
 
 aplicacao.use(express.json());
 
+aplicacao.use((request, response, next) => {
+
+    response.header("Access-Control-Allow-Origin", "*");
+    response.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    );
+    response.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type"
+    );
+
+    if (request.method === "OPTIONS")
+    {
+        return response.sendStatus(204);
+    }
+
+    next();
+
+});
+
 aplicacao.use("/uploads", express.static("uploads"));
 
 const rotasCarta = require("../app/routes/cartaRoutes");
