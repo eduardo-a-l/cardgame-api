@@ -173,6 +173,31 @@ listarInventario()
     };
 }
 
+listarInventarioPorUsuario()
+{
+    return function(request, response)
+    {
+        const idUsuario = request.params.idUsuario;
+
+        const cartaCRUD = new CartaCRUD(db);
+
+        cartaCRUD
+            .listagemInventarioPorUsuario(idUsuario)
+            .then((resultados) =>
+            {
+                response.json(resultados.recordset);
+            })
+            .catch((erro) =>
+            {
+                console.log(erro);
+
+                response.status(500).json({
+                    erro: "Erro ao listar inventário do usuário"
+                });
+            });
+    };
+}
+
 inserirInventario()
 {
     return function(request, response)

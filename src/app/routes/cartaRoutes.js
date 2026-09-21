@@ -39,6 +39,11 @@ module.exports = (aplicacao) => {
         obj_CartaController.listarInventario()
     );
 
+    aplicacao.get(
+        "/Inventario/:idUsuario",
+        obj_CartaController.listarInventarioPorUsuario()
+    );
+
     aplicacao.post(
         "/Inventario",
         obj_CartaController.inserirInventario()

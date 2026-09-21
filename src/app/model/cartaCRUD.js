@@ -235,6 +235,51 @@ class CartaCRUD
         });
     }
 
+    
+    listagemInventarioPorUsuario(idUsuario)
+    {
+        return new Promise((resolve, reject) =>
+        {
+            var sql =
+                "SELECT " +
+                "I.IDINVENTARIO AS IDINVENTARIO, " +
+                "I.IDUSUARIO AS IDUSUARIO, " +
+                "C.IDCARTA AS IDCARTA, " +
+                "C.NOME AS NOME, " +
+                "C.TIPO AS TIPO, " +
+                "C.RARIDADE AS RARIDADE, " +
+                "C.PRECOPADRAO AS PRECOPADRAO, " +
+                "C.VIDA AS VIDA, " +
+                "C.ACAO1 AS ACAO1, " +
+                "C.ACAO2 AS ACAO2 " +
+                "FROM CARDGAME.INVENTARIO I " +
+                "INNER JOIN CARDGAME.CARTA C " +
+                "ON I.IDCARTA = C.IDCARTA " +
+                "WHERE I.IDUSUARIO = " + idUsuario +
+                " ORDER BY I.IDINVENTARIO";
+
+            console.log(sql);
+
+            this._db.then((pool) =>
+            {
+                pool.request().query(sql, function(erro, resultados)
+                {
+                    if (erro)
+                    {
+                        console.log(erro);
+                        return reject("Listagem do inventário do usuário falhou");
+                    }
+
+                    resolve(resultados);
+                });
+            }).catch((erro) =>
+            {
+                console.log(erro);
+                reject("Erro na conexão com o banco de dados");
+            });
+        });
+    }
+
 
     insereInventario(inventario)
     {
