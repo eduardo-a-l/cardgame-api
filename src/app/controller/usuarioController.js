@@ -337,7 +337,7 @@ class UsuarioController
                     }
 
                     response.status(200).json({
-                        FOTOPERFIL: resultado.caminhoNovo
+                        FOTOPERFIL: caminhoNovo
                     });
                 })
                 .catch((erro) =>
