@@ -39,6 +39,11 @@ module.exports = (aplicacao) => {
         obj_UsuarioController.consultarUsuarioPorId()
     );
 
+    aplicacao.get(
+        "/Usuarios/:id/foto",
+        obj_UsuarioController.consultarFotoPerfil()
+    );
+
     aplicacao.patch(
         "/Usuarios/:id/pinBatalha",
         obj_UsuarioController.atualizarPinBatalha()

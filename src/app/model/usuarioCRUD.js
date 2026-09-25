@@ -419,63 +419,66 @@ class UsuarioCRUD {
     });
   }
 
-  atualizaFotoPerfil(id, caminho) {
+  atualizaFotoPerfil(id, imagem, tipoImagem) {
     return new Promise((resolve, reject) => {
-      var sql =
-        "UPDATE CARDGAME.USUARIO SET " +
-        "FOTOPERFIL = '" +
-        caminho +
-        "' " +
-        "WHERE IDUSUARIO = " +
-        id;
+        this._db
+            .then((pool) => {
+                pool
+                    .request()
+                    .input("id", mssql.Int, id)
+                    .input("imagem", mssql.VarBinary(mssql.MAX), imagem)
+                    .input("tipoImagem", mssql.VarChar(50), tipoImagem)
+                    .query(
+                        "UPDATE CARDGAME.USUARIO " +
+                        "SET FotoPerfil = @imagem, " +
+                        "TipoFotoPerfil = @tipoImagem " +
+                        "WHERE IDUSUARIO = @id",
+                        function (erro, resultados) {
+                            if (erro) {
+                                console.log(erro);
+                                return reject(
+                                    "Atualização da foto de perfil falhou"
+                                );
+                            }
 
-      console.log(sql);
+                            if (resultados.rowsAffected[0] === 0) {
+                                return reject("Usuário não encontrado");
+                            }
 
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Atualização da foto de perfil falhou");
-            }
-
-            if (resultados.rowsAffected[0] === 0) {
-              return reject("Usuário não encontrado");
-            }
-
-            resolve();
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
+                            resolve();
+                        }
+                    );
+            })
+            .catch((erro) => {
+                console.log(erro);
+                reject("Erro na conexão com o banco de dados");
+            });
     });
   }
 
   consultaFotoPerfil(id) {
     return new Promise((resolve, reject) => {
-      var sql =
-        "SELECT FOTOPERFIL " +
-        "FROM CARDGAME.USUARIO " +
-        "WHERE IDUSUARIO = " +
-        id;
+        var sql =
+            "SELECT FotoPerfil, TipoFotoPerfil " +
+            "FROM CARDGAME.USUARIO " +
+            "WHERE IDUSUARIO = " +
+            id;
 
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Erro ao consultar foto de perfil");
-            }
+        this._db
+            .then((pool) => {
+                pool.request().query(sql, function (erro, resultados) {
+                    if (erro) {
+                        console.log(erro);
+                        return reject("Erro ao consultar foto de perfil");
+                    }
 
-            resolve(resultados);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
+                    resolve(resultados);
+                });
+            })
+            .catch((erro) => {
+                console.log(erro);
+                reject("Erro na conexão com o banco de dados");
+            });
     });
   }
 }

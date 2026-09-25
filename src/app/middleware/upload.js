@@ -1,20 +1,6 @@
 const multer = require("multer");
-const path = require("path");
 
-const armazenamento = multer.diskStorage({
-    destination: function(request, file, callback)
-    {
-        callback(null, "uploads/perfis");
-    },
-
-    filename: function(request, file, callback)
-    {
-        const extensao = path.extname(file.originalname);
-        const nomeArquivo = "usuario-" + request.params.id + extensao;
-
-        callback(null, nomeArquivo);
-    }
-});
+const armazenamento = multer.memoryStorage();
 
 const upload = multer({
     storage: armazenamento,
@@ -35,7 +21,9 @@ const upload = multer({
         }
         else
         {
-            callback(new Error("Apenas imagens JPG, PNG ou WEBP são permitidas"));
+            callback(
+                new Error("Apenas imagens JPG, PNG ou WEBP são permitidas")
+            );
         }
     }
 });

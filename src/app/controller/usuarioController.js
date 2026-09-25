@@ -287,57 +287,17 @@ class UsuarioController
                 });
             }
 
-            const caminhoNovo = "/uploads/perfis/" + request.file.filename;
+            const imagem = request.file.buffer;
+            const tipoImagem = request.file.mimetype;
 
             const usuarioCRUD = new UsuarioCRUD(db);
 
             usuarioCRUD
-                .consultaFotoPerfil(id)
-                .then((resultado) =>
+                .atualizaFotoPerfil(id, imagem, tipoImagem)
+                .then(() =>
                 {
-                    if (resultado.recordset.length === 0)
-                    {
-                        return response.status(404).end();
-                    }
-
-                    const caminhoAntigo = resultado.recordset[0].FOTOPERFIL;
-
-                    return usuarioCRUD
-                        .atualizaFotoPerfil(id, caminhoNovo)
-                        .then(() =>
-                        {
-                            return {
-                                caminhoAntigo: caminhoAntigo,
-                                caminhoNovo: caminhoNovo
-                            };
-                        });
-                })
-                .then((resultado) =>
-                {
-                    if (!resultado)
-                    {
-                        return;
-                    }
-
-                    if (
-                        resultado.caminhoAntigo &&
-                        resultado.caminhoAntigo !== resultado.caminhoNovo
-                    )
-                    {
-                        const fs = require("fs");
-                        const caminhoArquivo = resultado.caminhoAntigo.replace(
-                            "/uploads/",
-                            "uploads/"
-                        );
-
-                        if (fs.existsSync(caminhoArquivo))
-                        {
-                            fs.unlinkSync(caminhoArquivo);
-                        }
-                    }
-
                     response.status(200).json({
-                        FOTOPERFIL: caminhoNovo
+                        mensagem: "Foto de perfil atualizada com sucesso"
                     });
                 })
                 .catch((erro) =>
@@ -346,6 +306,48 @@ class UsuarioController
 
                     response.status(500).json({
                         erro: "Erro ao atualizar foto de perfil"
+                    });
+                });
+        };
+    }
+
+    consultarFotoPerfil()
+    {
+        return function(request, response)
+        {
+            const id = request.params.id;
+
+            const usuarioCRUD = new UsuarioCRUD(db);
+
+            usuarioCRUD
+                .consultaFotoPerfil(id)
+                .then((resultados) =>
+                {
+                    if (resultados.recordset.length === 0)
+                    {
+                        return response.status(404).end();
+                    }
+
+                    const usuario = resultados.recordset[0];
+
+                    if (!usuario.FotoPerfil)
+                    {
+                        return response.status(404).end();
+                    }
+
+                    response.set(
+                        "Content-Type",
+                        usuario.TipoFotoPerfil
+                    );
+
+                    response.send(usuario.FotoPerfil);
+                })
+                .catch((erro) =>
+                {
+                    console.log(erro);
+
+                    response.status(500).json({
+                        erro: "Erro ao consultar foto de perfil"
                     });
                 });
         };
