@@ -1,35 +1,12 @@
+const { Router } = require("express");
 const BaralhoController = require("../controller/baralhoController");
 
-const obj_BaralhoController = new BaralhoController();
+const router = Router();
+const baralhoController = new BaralhoController();
 
-module.exports = (aplicacao) => {
+router.get("/Baralhos/:userId", baralhoController.listarBaralhosDoUsuario());
+router.post("/Baralhos", baralhoController.inserirNovoBaralho());
+router.put("/Baralhos/:id", baralhoController.atualizarBaralho());
+router.delete("/Baralhos/:id", baralhoController.excluirBaralho());
 
-    aplicacao.use((request, response, next) => {
-
-        response.header("Access-Control-Allow-Origin", "*");
-
-        next();
-
-    });
-
-    aplicacao.get(
-        "/Baralhos/:userId",
-        obj_BaralhoController.listarBaralhosDoUsuario()
-    );
-
-    aplicacao.post(
-        "/Baralhos",
-        obj_BaralhoController.inserirNovoBaralho()
-    );
-
-    aplicacao.put(
-        "/Baralhos/:id",
-        obj_BaralhoController.atualizarBaralho()
-    );
-
-    aplicacao.delete(
-        "/Baralhos/:id",
-        obj_BaralhoController.excluirBaralho()
-    );
-
-};
+module.exports = router;

@@ -1,127 +1,84 @@
 const LojaCRUD = require("../model/lojaCRUD");
+const db = require("../../config/database");
 
-var db = require("../../config/database");
+class LojaController {
+    listarItensLoja() {
+        return async (request, response) => {
+            try {
+                const { idUsuario } = request.params;
+                const lojaCRUD = new LojaCRUD(db);
 
-class LojaController
-{
+                const resultados = await lojaCRUD.listagemItensLoja(idUsuario);
 
-    listarItensLoja()
-    {
-        return function(request, response)
-        {
-            const idUsuario = request.params.idUsuario;
-
-            const lojaCRUD = new LojaCRUD(db);
-
-            lojaCRUD
-                .listagemItensLoja(idUsuario)
-                .then((resultados) =>
-                {
-                    console.log("Dados (JSON) dos itens da loja:");
-                    console.log(resultados.recordset);
-
-                    response.json(resultados.recordset);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao listar itens da loja"
-                    });
+                return response.json(resultados);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao listar itens da loja"
                 });
+            }
         };
     }
 
+    comprarItem() {
+        return async (request, response) => {
+            try {
+                const { userId, idLojaItem } = request.params;
+                const lojaCRUD = new LojaCRUD(db);
 
-    comprarItem()
-    {
-        return function(request, response)
-        {
-            const userId = request.params.userId;
-            const idLojaItem = request.params.idLojaItem;
+                const resultado = await lojaCRUD.comprarItem(userId, idLojaItem);
+                return response.status(200).json(resultado);
+            } catch (erro) {
+                console.error(erro);
 
-            const lojaCRUD = new LojaCRUD(db);
+                const mensagemErro = erro.message || erro;
 
-            lojaCRUD
-                .comprarItem(userId, idLojaItem)
-                .then((resultado) =>
-                {
-                    response.status(200).json(resultado);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
+                if (mensagemErro === "Usuário ou item não encontrado") {
+                    return response.status(404).json({ erro: mensagemErro });
+                }
 
-                    if (erro === "Usuário ou item não encontrado")
-                    {
-                        return response.status(404).json({
-                            erro: erro
-                        });
-                    }
+                if (mensagemErro === "Saldo insuficiente") {
+                    return response.status(400).json({ erro: mensagemErro });
+                }
 
-                    if (erro === "Saldo insuficiente")
-                    {
-                        return response.status(400).json({
-                            erro: erro
-                        });
-                    }
+                if (mensagemErro === "Você já adquiriu esta oferta única") {
+                    return response.status(409).json({ erro: mensagemErro });
+                }
 
-                    if (erro === "Você já adquiriu esta oferta única")
-                    {
-                        return response.status(409).json({
-                            erro: erro
-                        });
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao realizar compra"
-                    });
+                return response.status(500).json({
+                    erro: "Erro ao realizar compra"
                 });
+            }
         };
     }
 
+    venderCarta() {
+        return async (request, response) => {
+            try {
+                const { userId, idCarta } = request.params;
+                const lojaCRUD = new LojaCRUD(db);
 
-    venderCarta()
-    {
-        return function(request, response)
-        {
-            const userId = request.params.userId;
-            const idCarta = request.params.idCarta;
+                const resultado = await lojaCRUD.venderCarta(userId, idCarta);
+                return response.status(200).json(resultado);
+            } catch (erro) {
+                console.error(erro);
 
-            const lojaCRUD = new LojaCRUD(db);
+                const mensagemErro = erro.message || erro;
 
-            lojaCRUD
-                .venderCarta(userId, idCarta)
-                .then((resultado) =>
-                {
-                    response.status(200).json(resultado);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
+                if (mensagemErro === "Usuário não encontrado") {
+                    return response.status(404).json({ erro: mensagemErro });
+                }
 
-                    if (erro === "Usuário não encontrado")
-                    {
-                        return response.status(404).json({
-                            erro: erro
-                        });
-                    }
+                if (mensagemErro === "Você não possui essa carta no inventário") {
+                    return response.status(400).json({ Mensagem: mensagemErro });
+                }
 
-                    if (erro === "Você não possui essa carta no inventário")
-                    {
-                        return response.status(400).json({
-                            Mensagem: erro
-                        });
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao vender carta"
-                    });
+                return response.status(500).json({
+                    erro: "Erro ao vender carta"
                 });
+            }
         };
     }
-
 }
 
 module.exports = LojaController;

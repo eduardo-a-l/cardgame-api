@@ -1,48 +1,22 @@
 const express = require("express");
+const cors = require("cors");
+
+const rotasBaralho = require("../app/routes/baralhoRoutes");
+const rotasCarta = require("../app/routes/cartaRoutes");
+const rotasLoja = require("../app/routes/lojaRoutes");
+const rotasUsuario = require("../app/routes/usuarioRoutes");
 
 const aplicacao = express();
 
-const bodyParser = require("body-parser");
-
-aplicacao.use(
-    bodyParser.urlencoded({
-        extended: true
-    })
-);
-
+aplicacao.use(cors());
 aplicacao.use(express.json());
-
-aplicacao.use((request, response, next) => {
-
-    response.header("Access-Control-Allow-Origin", "*");
-    response.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    );
-    response.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type"
-    );
-
-    if (request.method === "OPTIONS")
-    {
-        return response.sendStatus(204);
-    }
-
-    next();
-
-});
+aplicacao.use(express.urlencoded({ extended: true }));
 
 aplicacao.use("/uploads", express.static("uploads"));
 
-const rotasCarta = require("../app/routes/cartaRoutes");
-const rotasUsuario = require("../app/routes/usuarioRoutes");
-const rotasLoja = require("../app/routes/lojaRoutes");
-const rotasBaralho = require("../app/routes/baralhoRoutes");
-
-rotasCarta(aplicacao);
-rotasUsuario(aplicacao);
-rotasLoja(aplicacao);
-rotasBaralho(aplicacao);
+aplicacao.use(rotasBaralho);
+aplicacao.use(rotasCarta);
+aplicacao.use(rotasLoja);
+aplicacao.use(rotasUsuario);
 
 module.exports = aplicacao;

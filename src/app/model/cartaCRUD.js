@@ -1,320 +1,194 @@
-class CartaCRUD
-{
+const mssql = require("mssql");
 
-    constructor(db){
+class CartaCRUD {
+    constructor(db) {
         this._db = db;
     }
 
-    consultaCartaPorId(id)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sql = "SELECT * FROM CARDGAME.CARTA WHERE IDCARTA = " + id;
+    async consultaCartaPorId(id) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
 
-            console.log(sql);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sql, function(erro, resultados)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Listagem com os dados da carta de id " + id + " falhou");
-                    }
-
-                    resolve(resultados);
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            const sql = "SELECT * FROM CARDGAME.Carta WHERE idCarta = @id";
+            const resultado = await request.query(sql);
+            return resultado.recordset[0] || null;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error(`Listagem com os dados da carta de id ${id} falhou`);
+        }
     }
 
-
-    listagemCartas()
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sql = "SELECT * FROM CARDGAME.CARTA ORDER BY IDCARTA";
-
-            console.log(sql);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sql, function(erro, resultados)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Listagem com todas as cartas falhou");
-                    }
-
-                    resolve(resultados);
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+    async listagemCartas() {
+        try {
+            const pool = await this._db;
+            const sql = "SELECT * FROM CARDGAME.Carta ORDER BY idCarta";
+            const resultado = await pool.request().query(sql);
+            return resultado.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Listagem com todas as cartas falhou");
+        }
     }
 
+    async insereCarta(carta) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
 
-    insereCarta(carta)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var vida = carta.vida === null || carta.vida === undefined
-                ? "NULL"
-                : carta.vida;
+            request.input("idCarta", mssql.Int, carta.idCarta);
+            request.input("nome", mssql.VarChar(50), carta.nome);
+            request.input("tipo", mssql.VarChar(20), carta.tipo);
+            request.input("raridade", mssql.VarChar(20), carta.raridade);
+            request.input("precoPadrao", mssql.Int, carta.precoPadrao);
+            request.input("vida", mssql.Int, carta.vida ?? null);
+            request.input("acao1", mssql.VarChar(100), carta.acao1 ?? null);
+            request.input("acao2", mssql.VarChar(100), carta.acao2 ?? null);
 
-            var acao1 = carta.acao1 === null || carta.acao1 === undefined
-                ? "NULL"
-                : "'" + carta.acao1 + "'";
+            const sql = `
+        INSERT INTO CARDGAME.Carta 
+          (idCarta, nome, tipo, raridade, precoPadrao, vida, acao1, acao2) 
+        VALUES 
+          (@idCarta, @nome, @tipo, @raridade, @precoPadrao, @vida, @acao1, @acao2)
+      `;
 
-            var acao2 = carta.acao2 === null || carta.acao2 === undefined
-                ? "NULL"
-                : "'" + carta.acao2 + "'";
-
-            var sqlInsere =
-                "INSERT INTO CARDGAME.CARTA " +
-                "(IDCARTA, NOME, TIPO, RARIDADE, PRECOPADRAO, VIDA, ACAO1, ACAO2) " +
-                "VALUES (" +
-                carta.idCarta + "," +
-                "'" + carta.nome + "'," +
-                "'" + carta.tipo + "'," +
-                "'" + carta.raridade + "'," +
-                carta.precoPadrao + "," +
-                vida + "," +
-                acao1 + "," +
-                acao2 +
-                ")";
-
-            console.log("INSERT na tabela carta = " + sqlInsere);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sqlInsere, function(erro)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Inclusão de nova carta está com erro");
-                    }
-
-                    resolve();
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            await request.query(sql);
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Inclusão de nova carta está com erro");
+        }
     }
 
+    async atualizaCarta(id, carta) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
 
-    atualizaCarta(id, carta)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var vida = carta.vida === null || carta.vida === undefined
-                ? "NULL"
-                : carta.vida;
+            request.input("id", mssql.Int, id);
+            request.input("nome", mssql.VarChar(50), carta.nome);
+            request.input("tipo", mssql.VarChar(20), carta.tipo);
+            request.input("raridade", mssql.VarChar(20), carta.raridade);
+            request.input("precoPadrao", mssql.Int, carta.precoPadrao);
+            request.input("vida", mssql.Int, carta.vida ?? null);
+            request.input("acao1", mssql.VarChar(100), carta.acao1 ?? null);
+            request.input("acao2", mssql.VarChar(100), carta.acao2 ?? null);
 
-            var acao1 = carta.acao1 === null || carta.acao1 === undefined
-                ? "NULL"
-                : "'" + carta.acao1 + "'";
+            const sql = `
+        UPDATE CARDGAME.Carta SET 
+          nome = @nome,
+          tipo = @tipo,
+          raridade = @raridade,
+          precoPadrao = @precoPadrao,
+          vida = @vida,
+          acao1 = @acao1,
+          acao2 = @acao2
+        WHERE idCarta = @id
+      `;
 
-            var acao2 = carta.acao2 === null || carta.acao2 === undefined
-                ? "NULL"
-                : "'" + carta.acao2 + "'";
-
-            var sqlAtualiza =
-                "UPDATE CARDGAME.CARTA SET " +
-                "NOME='" + carta.nome + "'," +
-                "TIPO='" + carta.tipo + "'," +
-                "RARIDADE='" + carta.raridade + "'," +
-                "PRECOPADRAO=" + carta.precoPadrao + "," +
-                "VIDA=" + vida + "," +
-                "ACAO1=" + acao1 + "," +
-                "ACAO2=" + acao2 +
-                " WHERE IDCARTA = " + id;
-
-            console.log("UPDATE na tabela carta = " + sqlAtualiza);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sqlAtualiza, function(erro)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Atualização dos dados da carta está com erro");
-                    }
-
-                    resolve();
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            await request.query(sql);
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Atualização dos dados da carta está com erro");
+        }
     }
 
+    async removeCarta(id) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
 
-    removeCarta(id)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sqlDelete =
-                "DELETE FROM CARDGAME.CARTA WHERE IDCARTA = " + id;
-
-            console.log("DELETE na tabela carta = " + sqlDelete);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sqlDelete, function(erro)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Exclusão de uma carta está com erro");
-                    }
-
-                    resolve();
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            const sql = "DELETE FROM CARDGAME.Carta WHERE idCarta = @id";
+            await request.query(sql);
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Exclusão de uma carta está com erro");
+        }
     }
 
+    async listagemInventario() {
+        try {
+            const pool = await this._db;
+            const sql = `
+        SELECT
+          I.idInventario,
+          I.idUsuario,
+          I.idCarta,
+          C.nome AS carta_nome,
+          C.tipo AS carta_tipo,
+          C.raridade AS carta_raridade,
+          C.precoPadrao AS carta_precoPadrao,
+          C.vida AS carta_vida,
+          C.acao1 AS carta_acao1,
+          C.acao2 AS carta_acao2,
+          U.nome AS usuario_nome,
+          U.email AS usuario_email
+        FROM CARDGAME.Inventario I
+        INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta
+        INNER JOIN CARDGAME.Usuario U ON I.idUsuario = U.idUsuario
+        ORDER BY I.idInventario
+      `;
 
-    listagemInventario()
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sql = `
-                SELECT
-                    I.*,
-                    C.*,
-                    U.*
-                FROM CARDGAME.INVENTARIO I
-                INNER JOIN CARDGAME.CARTA C
-                    ON I.IDCARTA = C.IDCARTA
-                INNER JOIN CARDGAME.USUARIO U
-                    ON I.IDUSUARIO = U.IDUSUARIO
-                ORDER BY I.IDINVENTARIO
-            `;
-
-            console.log(sql);
-
-            this._db.then((pool) =>
-            {
-                pool.request().query(sql, function(erro, resultados)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Listagem do inventário falhou");
-                    }
-
-                    resolve(resultados);
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            const resultado = await pool.request().query(sql);
+            return resultado.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Listagem do inventário falhou");
+        }
     }
 
-    
-    listagemInventarioPorUsuario(idUsuario)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sql =
-                "SELECT " +
-                "I.IDINVENTARIO AS IDINVENTARIO, " +
-                "I.IDUSUARIO AS IDUSUARIO, " +
-                "C.IDCARTA AS IDCARTA, " +
-                "C.NOME AS NOME, " +
-                "C.TIPO AS TIPO, " +
-                "C.RARIDADE AS RARIDADE, " +
-                "C.PRECOPADRAO AS PRECOPADRAO, " +
-                "C.VIDA AS VIDA, " +
-                "C.ACAO1 AS ACAO1, " +
-                "C.ACAO2 AS ACAO2 " +
-                "FROM CARDGAME.INVENTARIO I " +
-                "INNER JOIN CARDGAME.CARTA C " +
-                "ON I.IDCARTA = C.IDCARTA " +
-                "WHERE I.IDUSUARIO = " + idUsuario +
-                " ORDER BY I.IDINVENTARIO";
+    async listagemInventarioPorUsuario(idUsuario) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("idUsuario", mssql.Int, idUsuario);
 
-            console.log(sql);
+            const sql = `
+        SELECT 
+          I.idInventario,
+          I.idUsuario,
+          C.idCarta,
+          C.nome,
+          C.tipo,
+          C.raridade,
+          C.precoPadrao,
+          C.vida,
+          C.acao1,
+          C.acao2
+        FROM CARDGAME.Inventario I
+        INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta
+        WHERE I.idUsuario = @idUsuario
+        ORDER BY I.idInventario
+      `;
 
-            this._db.then((pool) =>
-            {
-                pool.request().query(sql, function(erro, resultados)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Listagem do inventário do usuário falhou");
-                    }
-
-                    resolve(resultados);
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            const resultado = await request.query(sql);
+            return resultado.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Listagem do inventário do usuário falhou");
+        }
     }
 
+    async insereInventario(inventario) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
 
-    insereInventario(inventario)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var sqlInsere =
-                "INSERT INTO CARDGAME.INVENTARIO " +
-                "(IDCARTA, IDUSUARIO) " +
-                "VALUES (" +
-                inventario.idCarta + "," +
-                inventario.idUsuario +
-                ")";
+            request.input("idCarta", mssql.Int, inventario.idCarta);
+            request.input("idUsuario", mssql.Int, inventario.idUsuario);
 
-            console.log("INSERT na tabela inventario = " + sqlInsere);
+            const sql = `
+        INSERT INTO CARDGAME.Inventario (idCarta, idUsuario)
+        VALUES (@idCarta, @idUsuario)
+      `;
 
-            this._db.then((pool) =>
-            {
-                pool.request().query(sqlInsere, function(erro)
-                {
-                    if (erro)
-                    {
-                        console.log(erro);
-                        return reject("Inclusão no inventário está com erro");
-                    }
-
-                    resolve();
-                });
-            }).catch((erro) =>
-            {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
-        });
+            await request.query(sql);
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Inclusão no inventário está com erro");
+        }
     }
-
 }
 
 module.exports = CartaCRUD;

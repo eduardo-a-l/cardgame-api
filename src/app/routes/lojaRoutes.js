@@ -1,30 +1,11 @@
+const { Router } = require("express");
 const LojaController = require("../controller/lojaController");
 
-const obj_LojaController = new LojaController();
+const router = Router();
+const lojaController = new LojaController();
 
-module.exports = (aplicacao) => {
+router.get("/Loja/itens/:idUsuario", lojaController.listarItensLoja());
+router.post("/Loja/comprar/:userId/:idLojaItem", lojaController.comprarItem());
+router.post("/Loja/vender/:userId/:idCarta", lojaController.venderCarta());
 
-    aplicacao.use((request, response, next) => {
-
-        response.header("Access-Control-Allow-Origin", "*");
-
-        next();
-
-    });
-
-    aplicacao.get(
-        "/Loja/itens/:idUsuario",
-        obj_LojaController.listarItensLoja()
-    );
-
-    aplicacao.post(
-        "/Loja/comprar/:userId/:idLojaItem",
-        obj_LojaController.comprarItem()
-    );
-
-    aplicacao.post(
-        "/Loja/vender/:userId/:idCarta",
-        obj_LojaController.venderCarta()
-    );
-
-};
+module.exports = router;

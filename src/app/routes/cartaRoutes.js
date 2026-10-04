@@ -1,52 +1,17 @@
+const { Router } = require("express");
 const CartaController = require("../controller/cartaController");
 
-const obj_CartaController = new CartaController();
+const router = Router();
+const cartaController = new CartaController();
 
-module.exports = (aplicacao) => {
+router.get("/Cartas", cartaController.listarTodasCartas());
+router.get("/Cartas/:id", cartaController.consultarCartaPorId());
+router.post("/Cartas", cartaController.inserirNovaCarta());
+router.put("/Cartas/:id", cartaController.atualizarDadosCarta());
+router.delete("/Cartas/:id", cartaController.excluirCarta());
 
-    aplicacao.use((request, response, next) => {
+router.get("/Inventario", cartaController.listarInventario());
+router.get("/Inventario/:idUsuario", cartaController.listarInventarioPorUsuario());
+router.post("/Inventario", cartaController.inserirInventario());
 
-        response.header("Access-Control-Allow-Origin", "*");
-
-        next();
-
-    });
-
-    aplicacao.get("/Cartas", obj_CartaController.listarTodasCartas());
-
-    aplicacao.get(
-        "/Cartas/:id",
-        obj_CartaController.consultarCartaPorId()
-    );
-
-    aplicacao.delete(
-        "/Cartas/:id",
-        obj_CartaController.excluirCarta()
-    );
-
-    aplicacao.post(
-        "/Cartas",
-        obj_CartaController.inserirNovaCarta()
-    );
-
-    aplicacao.put(
-        "/Cartas/:id",
-        obj_CartaController.atualizarDadosCarta()
-    );
-
-    aplicacao.get(
-        "/Inventario",
-        obj_CartaController.listarInventario()
-    );
-
-    aplicacao.get(
-        "/Inventario/:idUsuario",
-        obj_CartaController.listarInventarioPorUsuario()
-    );
-
-    aplicacao.post(
-        "/Inventario",
-        obj_CartaController.inserirInventario()
-    );
-
-};
+module.exports = router;

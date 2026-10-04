@@ -1,470 +1,323 @@
 const mssql = require("mssql");
 
 class UsuarioCRUD {
-  constructor(db) {
-    this._db = db;
-  }
+    constructor(db) {
+        this._db = db;
+    }
 
-  listagemUsuarios() {
-    return new Promise((resolve, reject) => {
-      var sql = "SELECT * FROM CARDGAME.USUARIO ORDER BY IDUSUARIO";
+    async listagemUsuarios() {
+        try {
+            const pool = await this._db;
+            const resultado = await pool
+                .request()
+                .query("SELECT * FROM CARDGAME.Usuario ORDER BY idUsuario");
+            return resultado.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Listagem com todos os usuários falhou");
+        }
+    }
 
-      console.log(sql);
+    async insereUsuario(usuario) {
+        const pool = await this._db;
+        const transacao = new mssql.Transaction(pool);
 
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Listagem com todos os usuários falhou");
-            }
-
-            resolve(resultados);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
-
-  insereUsuario(usuario) {
-    return new Promise((resolve, reject) => {
-      this._db
-        .then(async (pool) => {
-          const transacao = new mssql.Transaction(pool);
-
-          try {
+        try {
             await transacao.begin();
 
-            var sqlExiste =
-              "SELECT * FROM CARDGAME.USUARIO " +
-              "WHERE NOMEUSUARIO = '" +
-              usuario.nomeUsuario +
-              "'";
-
-            console.log(sqlExiste);
-
-            var resultadoExiste = await transacao.request().query(sqlExiste);
-
-            if (resultadoExiste.recordset.length > 0) {
-              await transacao.rollback();
-              return reject("Usuário já cadastrado");
-            }
-
-            var sqlInsere =
-              "INSERT INTO CARDGAME.USUARIO " +
-              "(NOMEUSUARIO, SENHA, PONTOS, MOEDAS, VITORIAS, DERROTAS, PINBATALHA) " +
-              "OUTPUT INSERTED.* " +
-              "VALUES (" +
-              "'" +
-              usuario.nomeUsuario +
-              "'," +
-              "'" +
-              usuario.senha +
-              "'," +
-              "1000," +
-              "100," +
-              "0," +
-              "0," +
-              "0" +
-              ")";
-
-            console.log("INSERT na tabela usuario = " + sqlInsere);
-
-            var resultadoUsuario = await transacao.request().query(sqlInsere);
-
-            var usuarioInserido = resultadoUsuario.recordset[0];
-
-            var sqlInventario =
-              "INSERT INTO CARDGAME.INVENTARIO " +
-              "(IDUSUARIO, IDCARTA) VALUES " +
-              "(" + usuarioInserido.idUsuario + ",4)," +
-              "(" + usuarioInserido.idUsuario + ",4)," +
-              "(" + usuarioInserido.idUsuario + ",5)," +
-              "(" + usuarioInserido.idUsuario + ",6)," +
-              "(" + usuarioInserido.idUsuario + ",7)," +
-              "(" + usuarioInserido.idUsuario + ",8)," +
-              "(" + usuarioInserido.idUsuario + ",8)," +
-              "(" + usuarioInserido.idUsuario + ",9)," +
-              "(" + usuarioInserido.idUsuario + ",9)," +
-              "(" + usuarioInserido.idUsuario + ",10)";
-
-            console.log(
-              "INSERT das cartas iniciais no inventário = " + sqlInventario
+            const reqExiste = transacao.request();
+            reqExiste.input("nomeUsuario", mssql.VarChar(100), usuario.nomeUsuario);
+            const resExiste = await reqExiste.query(
+                "SELECT idUsuario FROM CARDGAME.Usuario WHERE nomeUsuario = @nomeUsuario"
             );
 
-            await transacao.request().query(sqlInventario);
+            if (resExiste.recordset.length > 0) {
+                await transacao.rollback();
+                throw new Error("Usuário já cadastrado");
+            }
 
+            const reqInsere = transacao.request();
+            reqInsere.input("nomeUsuario", mssql.VarChar(100), usuario.nomeUsuario);
+            reqInsere.input("senha", mssql.VarChar(255), usuario.senha);
+
+            const sqlInsere = `
+                INSERT INTO CARDGAME.Usuario 
+                    (nomeUsuario, senha, pontos, moedas, vitorias, derrotas, pinBatalha)
+                OUTPUT INSERTED.* 
+                VALUES (@nomeUsuario, @senha, 1000, 100, 0, 0, 0)
+            `;
+
+            const resUsuario = await reqInsere.query(sqlInsere);
+            const usuarioInserido = resUsuario.recordset[0];
+
+            const reqInv = transacao.request();
+            reqInv.input("idUsuario", mssql.Int, usuarioInserido.idUsuario);
+
+            const sqlInventario = `
+                INSERT INTO CARDGAME.Inventario (idUsuario, idCarta) VALUES 
+                    (@idUsuario, 4), (@idUsuario, 4),
+                    (@idUsuario, 5), (@idUsuario, 6),
+                    (@idUsuario, 7), (@idUsuario, 8),
+                    (@idUsuario, 8), (@idUsuario, 9),
+                    (@idUsuario, 9), (@idUsuario, 10)
+            `;
+
+            await reqInv.query(sqlInventario);
             await transacao.commit();
 
-            resolve(usuarioInserido);
-          } catch (erro) {
-            console.log(erro);
-
+            return usuarioInserido;
+        } catch (erro) {
+            console.error(erro);
             try {
-              await transacao.rollback();
-            } catch (erroRollback) {
-              console.log(erroRollback);
-            }
+                await transacao.rollback();
+            } catch (e) { }
+            throw new Error(erro.message || "Inclusão de novo usuário está com erro");
+        }
+    }
 
-            reject("Inclusão de novo usuário está com erro");
-          }
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+    async loginUsuario(nomeUsuario, senha) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("nomeUsuario", mssql.VarChar(100), nomeUsuario);
+            request.input("senha", mssql.VarChar(255), senha);
 
-  loginUsuario(nomeUsuario, senha) {
-    return new Promise((resolve, reject) => {
-      var sql =
-        "SELECT * FROM CARDGAME.USUARIO " +
-        "WHERE NOMEUSUARIO = '" +
-        nomeUsuario +
-        "' " +
-        "AND SENHA = '" +
-        senha +
-        "'";
+            const sql = `
+                SELECT * FROM CARDGAME.Usuario 
+                WHERE nomeUsuario = @nomeUsuario AND senha = @senha
+            `;
 
-      console.log(sql);
+            const resultados = await request.query(sql);
+            return resultados.recordset[0] || null;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Erro ao realizar login");
+        }
+    }
 
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Erro ao realizar login");
-            }
+    async rankingUsuarios() {
+        try {
+            const pool = await this._db;
+            const sql = `
+                SELECT idUsuario, nomeUsuario, pontos, moedas, fotoPerfil 
+                FROM CARDGAME.Usuario 
+                ORDER BY pontos DESC
+            `;
+            const resultados = await pool.request().query(sql);
+            return resultados.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Listagem do ranking falhou");
+        }
+    }
 
-            if (resultados.recordset.length === 0) {
-              return resolve(null);
-            }
+    async consultaUsuarioPorId(id) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
 
-            resolve(resultados.recordset[0]);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+            const sql = `
+                SELECT idUsuario, nomeUsuario, pontos, moedas, 
+                       vitorias, derrotas, pinBatalha, fotoPerfil 
+                FROM CARDGAME.Usuario 
+                WHERE idUsuario = @id
+            `;
 
-  rankingUsuarios() {
-    return new Promise((resolve, reject) => {
-      var sql =
-        "SELECT IDUSUARIO, NOMEUSUARIO, PONTOS, MOEDAS, FOTOPERFIL " +
-        "FROM CARDGAME.USUARIO " +
-        "ORDER BY PONTOS DESC";
+            const resultados = await request.query(sql);
+            return resultados.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error(`Listagem do usuário de id ${id} falhou`);
+        }
+    }
 
-      console.log(sql);
+    async atualizaPinBatalha(id, novoPin) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
+            request.input("novoPin", mssql.Int, novoPin);
 
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Listagem do ranking falhou");
-            }
+            const sql = `
+                UPDATE CARDGAME.Usuario 
+                SET pinBatalha = @novoPin 
+                WHERE idUsuario = @id
+            `;
 
-            resolve(resultados);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
-
-  consultaUsuarioPorId(id) {
-    return new Promise((resolve, reject) => {
-      var sql =
-        "SELECT IDUSUARIO, NOMEUSUARIO, PONTOS, MOEDAS, " +
-        "VITORIAS, DERROTAS, PINBATALHA, FOTOPERFIL " +
-        "FROM CARDGAME.USUARIO " +
-        "WHERE IDUSUARIO = " +
-        id;
-
-      console.log(sql);
-
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Listagem do usuário de id " + id + " falhou");
-            }
-
-            resolve(resultados);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
-
-  atualizaPinBatalha(id, novoPin) {
-    return new Promise((resolve, reject) => {
-      var sql =
-        "UPDATE CARDGAME.USUARIO " +
-        "SET PINBATALHA = " +
-        novoPin +
-        " WHERE IDUSUARIO = " +
-        id;
-
-      console.log(sql);
-
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Atualização do PIN de batalha falhou");
-            }
-
+            const resultados = await request.query(sql);
             if (resultados.rowsAffected[0] === 0) {
-              return reject("Usuário não encontrado");
+                throw new Error("Usuário não encontrado");
             }
+        } catch (erro) {
+            console.error(erro);
+            throw new Error(erro.message || "Atualização do PIN de batalha falhou");
+        }
+    }
 
-            resolve();
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+    async registraResultadoBatalha(idVencedor, idPerdedor) {
+        const pool = await this._db;
+        const transacao = new mssql.Transaction(pool);
 
-  registraResultadoBatalha(idVencedor, idPerdedor) {
-    return new Promise((resolve, reject) => {
-      this._db
-        .then(async (pool) => {
-          const transacao = new mssql.Transaction(pool);
-
-          try {
+        try {
             await transacao.begin();
 
-            const resVencedor = await transacao
-              .request()
-              .query(
-                "SELECT * FROM CARDGAME.USUARIO WHERE IDUSUARIO = " + idVencedor
-              );
+            const reqVencedor = transacao.request();
+            reqVencedor.input("idVencedor", mssql.Int, idVencedor);
+            const resVencedor = await reqVencedor.query(
+                "SELECT pontos FROM CARDGAME.Usuario WHERE idUsuario = @idVencedor"
+            );
 
-            const resPerdedor = await transacao
-              .request()
-              .query(
-                "SELECT * FROM CARDGAME.USUARIO WHERE IDUSUARIO = " + idPerdedor
-              );
+            const reqPerdedor = transacao.request();
+            reqPerdedor.input("idPerdedor", mssql.Int, idPerdedor);
+            const resPerdedor = await reqPerdedor.query(
+                "SELECT pontos FROM CARDGAME.Usuario WHERE idUsuario = @idPerdedor"
+            );
 
-            if (
-              resVencedor.recordset.length === 0 ||
-              resPerdedor.recordset.length === 0
-            ) {
-              await transacao.rollback();
-              return reject("Um ou ambos os usuários não foram encontrados");
+            if (resVencedor.recordset.length === 0 || resPerdedor.recordset.length === 0) {
+                await transacao.rollback();
+                throw new Error("Um ou ambos os usuários não foram encontrados");
             }
 
-            const dadosVencedor = resVencedor.recordset[0];
-            const dadosPerdedor = resPerdedor.recordset[0];
-
-            const RA = dadosVencedor.Pontos;
-            const RB = dadosPerdedor.Pontos;
-
+            const RA = resVencedor.recordset[0].pontos;
+            const RB = resPerdedor.recordset[0].pontos;
             const K = 50;
-
             const EA = 1 / (1 + Math.pow(10, (RB - RA) / 400));
 
             const ganhoVencedor = Math.round(K * (1 - EA));
             const perdaPerdedor = ganhoVencedor;
 
-            await transacao.request().query(
-              `UPDATE CARDGAME.USUARIO SET ` +
-                `PONTOS = PONTOS + ${ganhoVencedor}, ` +
-                `MOEDAS = MOEDAS + 50, ` +
-                `VITORIAS = VITORIAS + 1 ` +
-                `WHERE IDUSUARIO = ${idVencedor}`
-            );
+            const reqUpVencedor = transacao.request();
+            reqUpVencedor.input("ganho", mssql.Int, ganhoVencedor);
+            reqUpVencedor.input("idVencedor", mssql.Int, idVencedor);
+            await reqUpVencedor.query(`
+                UPDATE CARDGAME.Usuario SET 
+                    pontos = pontos + @ganho, 
+                    moedas = moedas + 50, 
+                    vitorias = vitorias + 1 
+                WHERE idUsuario = @idVencedor
+            `);
 
-            await transacao.request().query(
-              `UPDATE CARDGAME.USUARIO SET ` +
-                `PONTOS = PONTOS - ${perdaPerdedor}, ` +
-                `MOEDAS = MOEDAS + 10, ` +
-                `DERROTAS = DERROTAS + 1 ` +
-                `WHERE IDUSUARIO = ${idPerdedor}`
-            );
+            const reqUpPerdedor = transacao.request();
+            reqUpPerdedor.input("perda", mssql.Int, perdaPerdedor);
+            reqUpPerdedor.input("idPerdedor", mssql.Int, idPerdedor);
+            await reqUpPerdedor.query(`
+                UPDATE CARDGAME.Usuario SET 
+                    pontos = pontos - @perda, 
+                    moedas = moedas + 10, 
+                    derrotas = derrotas + 1 
+                WHERE idUsuario = @idPerdedor
+            `);
 
             await transacao.commit();
 
-            resolve({ ganhoVencedor, perdaPerdedor });
-          } catch (erro) {
-            console.log(erro);
-
+            return { ganhoVencedor, perdaPerdedor };
+        } catch (erro) {
+            console.error(erro);
             try {
-              await transacao.rollback();
-            } catch (erroRollback) {
-              console.log(erroRollback);
-            }
+                await transacao.rollback();
+            } catch (e) { }
+            throw new Error(erro.message || "Erro ao processar o resultado da batalha");
+        }
+    }
 
-            reject("Erro ao processar o resultado da batalha");
-          }
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+    async removeUsuario(id) {
+        const pool = await this._db;
+        const transacao = new mssql.Transaction(pool);
 
-  removeUsuario(id) {
-    return new Promise((resolve, reject) => {
-      this._db
-        .then(async (pool) => {
-          const transacao = new mssql.Transaction(pool);
-
-          try {
+        try {
             await transacao.begin();
 
-            var resultadoUsuario = await transacao
-              .request()
-              .query(
-                "SELECT * FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id
-              );
+            const reqExiste = transacao.request();
+            reqExiste.input("id", mssql.Int, id);
+            const resExiste = await reqExiste.query(
+                "SELECT idUsuario FROM CARDGAME.Usuario WHERE idUsuario = @id"
+            );
 
-            if (resultadoUsuario.recordset.length === 0) {
-              await transacao.rollback();
-              return reject("Usuário não encontrado");
+            if (resExiste.recordset.length === 0) {
+                await transacao.rollback();
+                throw new Error("Usuário não encontrado");
             }
 
-            await transacao
-              .request()
-              .query(
-                "DELETE FROM CARDGAME.Carta_Baralho " +
-                  "WHERE idInventario IN (" +
-                  "SELECT IDINVENTARIO " +
-                  "FROM CARDGAME.INVENTARIO " +
-                  "WHERE IDUSUARIO = " +
-                  id +
-                  ")"
-              );
+            const reqDelCartaBaralho = transacao.request();
+            reqDelCartaBaralho.input("id", mssql.Int, id);
+            await reqDelCartaBaralho.query(`
+                DELETE FROM CARDGAME.Carta_Baralho 
+                WHERE idInventario IN (
+                    SELECT idInventario FROM CARDGAME.Inventario WHERE idUsuario = @id
+                )
+            `);
 
-            await transacao
-              .request()
-              .query(
-                "DELETE FROM CARDGAME.INVENTARIO " + "WHERE IDUSUARIO = " + id
-              );
+            const reqDelInv = transacao.request();
+            reqDelInv.input("id", mssql.Int, id);
+            await reqDelInv.query("DELETE FROM CARDGAME.Inventario WHERE idUsuario = @id");
 
-            await transacao
-              .request()
-              .query(
-                "DELETE FROM CARDGAME.BARALHO " + "WHERE IDUSUARIO = " + id
-              );
+            const reqDelBaralho = transacao.request();
+            reqDelBaralho.input("id", mssql.Int, id);
+            await reqDelBaralho.query("DELETE FROM CARDGAME.Baralho WHERE idUsuario = @id");
 
-            await transacao
-              .request()
-              .query(
-                "DELETE FROM CARDGAME.COMPRAUSUARIO " +
-                  "WHERE IDUSUARIO = " +
-                  id
-              );
+            const reqDelCompra = transacao.request();
+            reqDelCompra.input("id", mssql.Int, id);
+            await reqDelCompra.query("DELETE FROM CARDGAME.CompraUsuario WHERE idUsuario = @id");
 
-            await transacao
-              .request()
-              .query(
-                "DELETE FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id
-              );
+            const reqDelUser = transacao.request();
+            reqDelUser.input("id", mssql.Int, id);
+            await reqDelUser.query("DELETE FROM CARDGAME.Usuario WHERE idUsuario = @id");
 
             await transacao.commit();
-
-            resolve();
-          } catch (erro) {
-            console.log(erro);
-
+        } catch (erro) {
+            console.error(erro);
             try {
-              await transacao.rollback();
-            } catch (erroRollback) {
-              console.log(erroRollback);
+                await transacao.rollback();
+            } catch (e) { }
+            throw new Error(erro.message || "Exclusão do usuário está com erro");
+        }
+    }
+
+    async atualizaFotoPerfil(id, imagem, tipoImagem) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
+            request.input("imagem", mssql.VarBinary(mssql.MAX), imagem);
+            request.input("tipoImagem", mssql.VarChar(50), tipoImagem);
+
+            const sql = `
+                UPDATE CARDGAME.Usuario 
+                SET fotoPerfil = @imagem, 
+                    tipoFotoPerfil = @tipoImagem 
+                WHERE idUsuario = @id
+            `;
+
+            const resultados = await request.query(sql);
+            if (resultados.rowsAffected[0] === 0) {
+                throw new Error("Usuário não encontrado");
             }
+        } catch (erro) {
+            console.error(erro);
+            throw new Error(erro.message || "Atualização da foto de perfil falhou");
+        }
+    }
 
-            reject("Exclusão do usuário está com erro");
-          }
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+    async consultaFotoPerfil(id) {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+            request.input("id", mssql.Int, id);
 
-  atualizaFotoPerfil(id, imagem, tipoImagem) {
-    return new Promise((resolve, reject) => {
-      this._db
-        .then((pool) => {
-          pool
-            .request()
-            .input("id", mssql.Int, id)
-            .input("imagem", mssql.VarBinary(mssql.MAX), imagem)
-            .input("tipoImagem", mssql.VarChar(50), tipoImagem)
-            .query(
-              "UPDATE CARDGAME.USUARIO " +
-                "SET FotoPerfil = @imagem, " +
-                "TipoFotoPerfil = @tipoImagem " +
-                "WHERE IDUSUARIO = @id",
-              function (erro, resultados) {
-                if (erro) {
-                  console.log(erro);
-                  return reject(
-                    "Atualização da foto de perfil falhou"
-                  );
-                }
+            const sql = `
+                SELECT fotoPerfil, tipoFotoPerfil 
+                FROM CARDGAME.Usuario 
+                WHERE idUsuario = @id
+            `;
 
-                if (resultados.rowsAffected[0] === 0) {
-                  return reject("Usuário não encontrado");
-                }
-
-                resolve();
-              }
-            );
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
-
-  consultaFotoPerfil(id) {
-    return new Promise((resolve, reject) => {
-      var sql =
-        "SELECT FotoPerfil, TipoFotoPerfil " +
-        "FROM CARDGAME.USUARIO " +
-        "WHERE IDUSUARIO = " +
-        id;
-
-      this._db
-        .then((pool) => {
-          pool.request().query(sql, function (erro, resultados) {
-            if (erro) {
-              console.log(erro);
-              return reject("Erro ao consultar foto de perfil");
-            }
-
-            resolve(resultados);
-          });
-        })
-        .catch((erro) => {
-          console.log(erro);
-          reject("Erro na conexão com o banco de dados");
-        });
-    });
-  }
+            const resultados = await request.query(sql);
+            return resultados.recordset;
+        } catch (erro) {
+            console.error(erro);
+            throw new Error("Erro ao consultar foto de perfil");
+        }
+    }
 }
 
 module.exports = UsuarioCRUD;

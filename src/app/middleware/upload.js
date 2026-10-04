@@ -7,20 +7,17 @@ const upload = multer({
     limits: {
         fileSize: 5 * 1024 * 1024
     },
-    fileFilter: function(request, file, callback)
-    {
+    fileFilter: function (request, file, callback) {
         const tiposPermitidos = [
             "image/jpeg",
             "image/png",
             "image/webp"
         ];
 
-        if (tiposPermitidos.includes(file.mimetype))
-        {
+        if (tiposPermitidos.includes(file.mimetype)) {
             callback(null, true);
         }
-        else
-        {
+        else {
             callback(
                 new Error("Apenas imagens JPG, PNG ou WEBP são permitidas")
             );

@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const mssql = require("mssql");
 
 const configuracao = {
@@ -13,17 +12,17 @@ const configuracao = {
     }
 };
 
-const conexao = mssql.connect(configuracao);
+const pool = new mssql.ConnectionPool(configuracao);
 
-conexao
-    .then(() => {
+const conexao = pool
+    .connect()
+    .then((poolConectado) => {
         console.log("Conexão com o BD SQLServer realizada com sucesso");
+        return poolConectado;
     })
     .catch((erro) => {
-        console.error(
-            "Erro na conexão com o BD SQLServer:",
-            erro
-        );
+        console.error("Erro na conexão com o BD SQLServer:", erro);
+        throw erro;
     });
 
 module.exports = conexao;

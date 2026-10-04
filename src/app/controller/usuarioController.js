@@ -1,358 +1,248 @@
 const UsuarioCRUD = require("../model/usuarioCRUD");
+const db = require("../../config/database");
 
-var db = require("../../config/database");
+class UsuarioController {
+    listarTodosUsuarios() {
+        return async (request, response) => {
+            try {
+                const usuarioCRUD = new UsuarioCRUD(db);
+                const resultados = await usuarioCRUD.listagemUsuarios();
 
-class UsuarioController
-{
-
-    listarTodosUsuarios()
-    {
-        return function(request, response)
-        {
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .listagemUsuarios()
-                .then((resultados) =>
-                {
-                    console.log("Dados (JSON) vindo da tabela usuario:");
-                    console.log(resultados.recordset);
-
-                    response.json(resultados.recordset);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao listar todos os usuários"
-                    });
-                });
-        };
-    }
-
-
-    inserirNovoUsuario()
-    {
-        return function(request, response)
-        {
-            let dados = request.body;
-
-            console.log("Dados do novo usuário = " + dados);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .insereUsuario(dados)
-                .then((usuario) =>
-                {
-                    console.log("Usuário foi inserido no BD com sucesso");
-
-                    response.status(201).json(usuario);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    if (erro === "Usuário já cadastrado")
-                    {
-                        return response.status(409).json({
-                            erro: "Usuário já cadastrado"
-                        });
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao inserir novo usuário no BD"
-                    });
-                });
-        };
-    }
-
-
-    login()
-    {
-        return function(request, response)
-        {
-            let dados = request.body;
-
-            console.log("Login do usuário = " + dados);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .loginUsuario(dados.nomeUsuario, dados.senha)
-                .then((usuario) =>
-                {
-                    if (usuario === null)
-                    {
-                        return response.status(401).end();
-                    }
-
-                    response.status(200).json(usuario);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao realizar login"
-                    });
-                });
-        };
-    }
-
-
-    ranking()
-    {
-        return function(request, response)
-        {
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .rankingUsuarios()
-                .then((resultados) =>
-                {
-                    response.json(resultados.recordset);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao listar ranking"
-                    });
-                });
-        };
-    }
-
-
-    consultarUsuarioPorId()
-    {
-        return function(request, response)
-        {
-            const idDoUsuario = request.params.id;
-
-            console.log("Id do usuário = " + idDoUsuario);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .consultaUsuarioPorId(idDoUsuario)
-                .then((resultados) =>
-                {
-                    if (resultados.recordset.length === 0)
-                    {
-                        return response.status(404).end();
-                    }
-
-                    response.json(resultados.recordset[0]);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao listar usuário por id"
-                    });
-                });
-        };
-    }
-
-
-    atualizarPinBatalha()
-    {
-        return function(request, response)
-        {
-            const id = request.params.id;
-
-            let novoPin = request.body.novoPin;
-
-            if (novoPin === undefined)
-            {
-                novoPin = request.query.novoPin;
-            }
-
-            console.log("Novo PIN de batalha = " + novoPin);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .atualizaPinBatalha(id, novoPin)
-                .then(() =>
-                {
-                    response.status(204).end();
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    if (erro === "Usuário não encontrado")
-                    {
-                        return response.status(404).end();
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao atualizar PIN de batalha"
-                    });
-                });
-        };
-    }
-
-
-    resultadoBatalha()
-    {
-        return function(request, response)
-        {
-            let dados = request.body;
-
-            console.log("Resultado da batalha = " + dados);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .registraResultadoBatalha(
-                    dados.idVencedor,
-                    dados.idPerdedor
-                )
-                .then(() =>
-                {
-                    response.status(200).json({
-                        Mensagem: "Resultado processado com sucesso"
-                    });
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    if (
-                        erro ===
-                        "Um ou ambos os usuários não foram encontrados"
-                    )
-                    {
-                        return response.status(404).json({
-                            erro: erro
-                        });
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao processar resultado da batalha"
-                    });
-                });
-        };
-    }
-
-
-    excluirUsuario()
-    {
-        return function(request, response)
-        {
-            const idDoUsuario = request.params.id;
-
-            console.log("Id do usuário a ser excluído = " + idDoUsuario);
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .removeUsuario(idDoUsuario)
-                .then(() =>
-                {
-                    response.status(204).end();
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    if (erro === "Usuário não encontrado")
-                    {
-                        return response.status(404).end();
-                    }
-
-                    response.status(500).json({
-                        erro: "Erro ao excluir usuário"
-                    });
-                });
-        };
-    }
-
-    atualizarFotoPerfil()
-    {
-        return function(request, response)
-        {
-            const id = request.params.id;
-
-            if (!request.file)
-            {
-                return response.status(400).json({
-                    erro: "Nenhuma imagem foi enviada"
+                return response.json(resultados.recordset);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao listar todos os usuários"
                 });
             }
-
-            const imagem = request.file.buffer;
-            const tipoImagem = request.file.mimetype;
-
-            const usuarioCRUD = new UsuarioCRUD(db);
-
-            usuarioCRUD
-                .atualizaFotoPerfil(id, imagem, tipoImagem)
-                .then(() =>
-                {
-                    response.status(200).json({
-                        mensagem: "Foto de perfil atualizada com sucesso"
-                    });
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao atualizar foto de perfil"
-                    });
-                });
         };
     }
 
-    consultarFotoPerfil()
-    {
-        return function(request, response)
-        {
-            const id = request.params.id;
+    inserirNovoUsuario() {
+        return async (request, response) => {
+            try {
+                const dados = request.body;
+                const usuarioCRUD = new UsuarioCRUD(db);
 
-            const usuarioCRUD = new UsuarioCRUD(db);
+                const usuario = await usuarioCRUD.insereUsuario(dados);
+                return response.status(201).json(usuario);
+            } catch (erro) {
+                console.error(erro);
 
-            usuarioCRUD
-                .consultaFotoPerfil(id)
-                .then((resultados) =>
-                {
-                    if (resultados.recordset.length === 0)
-                    {
-                        return response.status(404).end();
-                    }
+                const mensagemErro = erro.message || erro;
 
-                    const usuario = resultados.recordset[0];
-
-                    if (!usuario.FotoPerfil)
-                    {
-                        return response.status(404).end();
-                    }
-
-                    response.set(
-                        "Content-Type",
-                        usuario.TipoFotoPerfil
-                    );
-
-                    response.send(usuario.FotoPerfil);
-                })
-                .catch((erro) =>
-                {
-                    console.log(erro);
-
-                    response.status(500).json({
-                        erro: "Erro ao consultar foto de perfil"
+                if (mensagemErro === "Usuário já cadastrado") {
+                    return response.status(409).json({
+                        erro: "Usuário já cadastrado"
                     });
+                }
+
+                return response.status(500).json({
+                    erro: "Erro ao inserir novo usuário no BD"
                 });
+            }
         };
     }
 
+    login() {
+        return async (request, response) => {
+            try {
+                const { nomeUsuario, senha } = request.body;
+                const usuarioCRUD = new UsuarioCRUD(db);
+
+                const usuario = await usuarioCRUD.loginUsuario(nomeUsuario, senha);
+
+                if (usuario === null) {
+                    return response.status(401).end();
+                }
+
+                return response.status(200).json(usuario);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao realizar login"
+                });
+            }
+        };
+    }
+
+    ranking() {
+        return async (request, response) => {
+            try {
+                const usuarioCRUD = new UsuarioCRUD(db);
+                const resultados = await usuarioCRUD.rankingUsuarios();
+
+                return response.json(resultados.recordset);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao listar ranking"
+                });
+            }
+        };
+    }
+
+    consultarUsuarioPorId() {
+        return async (request, response) => {
+            try {
+                const idDoUsuario = request.params.id;
+                const usuarioCRUD = new UsuarioCRUD(db);
+
+                const resultados = await usuarioCRUD.consultaUsuarioPorId(idDoUsuario);
+
+                if (!resultados.recordset || resultados.recordset.length === 0) {
+                    return response.status(404).end();
+                }
+
+                return response.json(resultados.recordset[0]);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao listar usuário por id"
+                });
+            }
+        };
+    }
+
+    atualizarPinBatalha() {
+        return async (request, response) => {
+            try {
+                const { id } = request.params;
+                const novoPin = request.body.novoPin ?? request.query.novoPin;
+
+                const usuarioCRUD = new UsuarioCRUD(db);
+                await usuarioCRUD.atualizaPinBatalha(id, novoPin);
+
+                return response.status(204).end();
+            } catch (erro) {
+                console.error(erro);
+
+                const mensagemErro = erro.message || erro;
+
+                if (mensagemErro === "Usuário não encontrado") {
+                    return response.status(404).end();
+                }
+
+                return response.status(500).json({
+                    erro: "Erro ao atualizar PIN de batalha"
+                });
+            }
+        };
+    }
+
+    resultadoBatalha() {
+        return async (request, response) => {
+            try {
+                const { idVencedor, idPerdedor } = request.body;
+                const usuarioCRUD = new UsuarioCRUD(db);
+
+                await usuarioCRUD.registraResultadoBatalha(idVencedor, idPerdedor);
+
+                return response.status(200).json({
+                    Mensagem: "Resultado processado com sucesso"
+                });
+            } catch (erro) {
+                console.error(erro);
+
+                const mensagemErro = erro.message || erro;
+
+                if (
+                    mensagemErro === "Um ou ambos os usuários não foram encontrados"
+                ) {
+                    return response.status(404).json({
+                        erro: mensagemErro
+                    });
+                }
+
+                return response.status(500).json({
+                    erro: "Erro ao processar resultado da batalha"
+                });
+            }
+        };
+    }
+
+    excluirUsuario() {
+        return async (request, response) => {
+            try {
+                const idDoUsuario = request.params.id;
+                const usuarioCRUD = new UsuarioCRUD(db);
+
+                await usuarioCRUD.removeUsuario(idDoUsuario);
+
+                return response.status(204).end();
+            } catch (erro) {
+                console.error(erro);
+
+                const mensagemErro = erro.message || erro;
+
+                if (mensagemErro === "Usuário não encontrado") {
+                    return response.status(404).end();
+                }
+
+                return response.status(500).json({
+                    erro: "Erro ao excluir usuário"
+                });
+            }
+        };
+    }
+
+    atualizarFotoPerfil() {
+        return async (request, response) => {
+            try {
+                const { id } = request.params;
+
+                if (!request.file) {
+                    return response.status(400).json({
+                        erro: "Nenhuma imagem foi enviada"
+                    });
+                }
+
+                const imagem = request.file.buffer;
+                const tipoImagem = request.file.mimetype;
+
+                const usuarioCRUD = new UsuarioCRUD(db);
+                await usuarioCRUD.atualizaFotoPerfil(id, imagem, tipoImagem);
+
+                return response.status(200).json({
+                    mensagem: "Foto de perfil atualizada com sucesso"
+                });
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao atualizar foto de perfil"
+                });
+            }
+        };
+    }
+
+    consultarFotoPerfil() {
+        return async (request, response) => {
+            try {
+                const { id } = request.params;
+                const usuarioCRUD = new UsuarioCRUD(db);
+
+                const resultados = await usuarioCRUD.consultaFotoPerfil(id);
+
+                if (!resultados.recordset || resultados.recordset.length === 0) {
+                    return response.status(404).end();
+                }
+
+                const usuario = resultados.recordset[0];
+
+                if (!usuario.FotoPerfil) {
+                    return response.status(404).end();
+                }
+
+                response.set("Content-Type", usuario.TipoFotoPerfil);
+                return response.send(usuario.FotoPerfil);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
+                    erro: "Erro ao consultar foto de perfil"
+                });
+            }
+        };
+    }
 }
 
 module.exports = UsuarioController;

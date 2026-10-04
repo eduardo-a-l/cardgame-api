@@ -1,232 +1,156 @@
 const CartaCRUD = require("../model/cartaCRUD");
+const db = require("../../config/database");
 
-var db = require("../../config/database");
+class CartaController {
+    listarTodasCartas() {
+        return async (request, response) => {
+            try {
+                const cartaCRUD = new CartaCRUD(db);
+                const resultados = await cartaCRUD.listagemCartas();
 
-class CartaController
-{
-
-listarTodasCartas()
-{
-    return function(request, response)
-    {
-        const cartaCRUD = new CartaCRUD(db);
-
-        cartaCRUD
-            .listagemCartas()
-            .then((resultados) =>
-            {
-                console.log("Dados (JSON) vindo da tabela carta:");
-                console.log(resultados.recordset);
-
-                response.json(resultados.recordset);
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                return response.json(resultados);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao listar todas as cartas"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-consultarCartaPorId()
-{
-    return function(request, response)
-    {
-        const idDaCarta = request.params.id;
+    consultarCartaPorId() {
+        return async (request, response) => {
+            try {
+                const idDaCarta = request.params.id;
+                const cartaCRUD = new CartaCRUD(db);
 
-        console.log("Id da carta = " + idDaCarta);
+                const resultados = await cartaCRUD.consultaCartaPorId(idDaCarta);
 
-        const cartaCRUD = new CartaCRUD(db);
+                if (!resultados || resultados.length === 0) {
+                    return response.status(404).json({ erro: "Carta não encontrada" });
+                }
 
-        cartaCRUD
-            .consultaCartaPorId(idDaCarta)
-            .then((resultados) =>
-            {
-                console.log("Dados (JSON) da carta especificada:");
-                console.log(resultados.recordset);
-
-                response.json(resultados.recordset);
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                return response.json(resultados);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao listar carta por id"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-inserirNovaCarta()
-{
-    return function(request, response)
-    {
-        let dados = request.body;
+    inserirNovaCarta() {
+        return async (request, response) => {
+            try {
+                const dados = request.body;
+                const cartaCRUD = new CartaCRUD(db);
 
-        console.log("Dados da nova carta = " + dados);
-
-        const cartaCRUD = new CartaCRUD(db);
-
-        cartaCRUD
-            .insereCarta(dados)
-            .then(() =>
-            {
-                console.log("carta foi inserida no bd com sucesso");
-
-                response.status(200).end();
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                await cartaCRUD.insereCarta(dados);
+                return response.status(201).end();
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao inserir nova carta no bd"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-atualizarDadosCarta()
-{
-    return function(request, response)
-    {
-        let dados = request.body;
-        let id = request.params.id;
+    atualizarDadosCarta() {
+        return async (request, response) => {
+            try {
+                const { id } = request.params;
+                const dados = request.body;
+                const cartaCRUD = new CartaCRUD(db);
 
-        console.log("Dados da carta a serem atualizados = " + dados);
+                await cartaCRUD.atualizaCarta(id, dados);
+                return response.status(200).end();
+            } catch (erro) {
+                console.error(erro);
 
-        const cartaCRUD = new CartaCRUD(db);
+                if (erro.message === "Carta não encontrada") {
+                    return response.status(404).end();
+                }
 
-        cartaCRUD
-            .atualizaCarta(id, dados)
-            .then(() =>
-            {
-                console.log("Dados da carta foram atualizados com sucesso");
-
-                response.status(200).end();
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                return response.status(500).json({
                     erro: "Erro ao atualizar dados da carta no bd"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-excluirCarta()
-{
-    return function(request, response)
-    {
-        const idDaCarta = request.params.id;
+    excluirCarta() {
+        return async (request, response) => {
+            try {
+                const idDaCarta = request.params.id;
+                const cartaCRUD = new CartaCRUD(db);
 
-        const cartaCRUD = new CartaCRUD(db);
+                await cartaCRUD.removeCarta(idDaCarta);
+                return response.status(204).end();
+            } catch (erro) {
+                console.error(erro);
 
-        cartaCRUD
-            .removeCarta(idDaCarta)
-            .then(() =>
-            {
-                console.log("Carta foi excluída do bd com sucesso");
+                if (erro.message === "Carta não encontrada") {
+                    return response.status(404).end();
+                }
 
-                response.status(200).end();
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                return response.status(500).json({
                     erro: "Erro ao excluir carta no bd"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-listarInventario()
-{
-    return function(request, response)
-    {
-        const cartaCRUD = new CartaCRUD(db);
+    listarInventario() {
+        return async (request, response) => {
+            try {
+                const cartaCRUD = new CartaCRUD(db);
+                const resultados = await cartaCRUD.listagemInventario();
 
-        cartaCRUD
-            .listagemInventario()
-            .then((resultados) =>
-            {
-                console.log("Dados (JSON) do inventário:");
-                console.log(resultados.recordset);
-
-                response.json(resultados.recordset);
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                return response.json(resultados);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao listar inventário"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-listarInventarioPorUsuario()
-{
-    return function(request, response)
-    {
-        const idUsuario = request.params.idUsuario;
+    listarInventarioPorUsuario() {
+        return async (request, response) => {
+            try {
+                const { idUsuario } = request.params;
+                const cartaCRUD = new CartaCRUD(db);
 
-        const cartaCRUD = new CartaCRUD(db);
-
-        cartaCRUD
-            .listagemInventarioPorUsuario(idUsuario)
-            .then((resultados) =>
-            {
-                response.json(resultados.recordset);
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                const resultados = await cartaCRUD.listagemInventarioPorUsuario(idUsuario);
+                return response.json(resultados);
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao listar inventário do usuário"
                 });
-            });
-    };
-}
+            }
+        };
+    }
 
-inserirInventario()
-{
-    return function(request, response)
-    {
-        let dados = request.body;
+    inserirInventario() {
+        return async (request, response) => {
+            try {
+                const dados = request.body;
+                const cartaCRUD = new CartaCRUD(db);
 
-        console.log("Dados do novo item do inventário = " + dados);
-
-        const cartaCRUD = new CartaCRUD(db);
-
-        cartaCRUD
-            .insereInventario(dados)
-            .then(() =>
-            {
-                console.log("Item foi inserido no inventário com sucesso");
-
-                response.status(200).end();
-            })
-            .catch((erro) =>
-            {
-                console.log(erro);
-
-                response.status(500).json({
+                await cartaCRUD.insereInventario(dados);
+                return response.status(201).end();
+            } catch (erro) {
+                console.error(erro);
+                return response.status(500).json({
                     erro: "Erro ao inserir item no inventário"
                 });
-            });
-    };
-}
-
+            }
+        };
+    }
 }
 
 module.exports = CartaController;

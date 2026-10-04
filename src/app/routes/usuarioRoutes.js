@@ -1,68 +1,19 @@
+const { Router } = require("express");
 const UsuarioController = require("../controller/usuarioController");
-
-const obj_UsuarioController = new UsuarioController();
-
 const upload = require("../middleware/upload");
 
-module.exports = (aplicacao) => {
+const router = Router();
+const usuarioController = new UsuarioController();
 
-    aplicacao.use((request, response, next) => {
+router.get("/Usuarios", usuarioController.listarTodosUsuarios());
+router.post("/Usuarios", usuarioController.inserirNovoUsuario());
+router.post("/Usuarios/login", usuarioController.login());
+router.get("/Usuarios/ranking", usuarioController.ranking());
+router.get("/Usuarios/:id", usuarioController.consultarUsuarioPorId());
+router.get("/Usuarios/:id/foto", usuarioController.consultarFotoPerfil());
+router.patch("/Usuarios/:id/pinBatalha", usuarioController.atualizarPinBatalha());
+router.put("/Usuarios/resultado-batalha", usuarioController.resultadoBatalha());
+router.delete("/Usuarios/:id", usuarioController.excluirUsuario());
+router.patch("/Usuarios/:id/foto", upload.single("foto"), usuarioController.atualizarFotoPerfil());
 
-        response.header("Access-Control-Allow-Origin", "*");
-
-        next();
-
-    });
-
-    aplicacao.get(
-        "/Usuarios",
-        obj_UsuarioController.listarTodosUsuarios()
-    );
-
-    aplicacao.post(
-        "/Usuarios",
-        obj_UsuarioController.inserirNovoUsuario()
-    );
-
-    aplicacao.post(
-        "/Usuarios/login",
-        obj_UsuarioController.login()
-    );
-
-    aplicacao.get(
-        "/Usuarios/ranking",
-        obj_UsuarioController.ranking()
-    );
-
-    aplicacao.get(
-        "/Usuarios/:id",
-        obj_UsuarioController.consultarUsuarioPorId()
-    );
-
-    aplicacao.get(
-        "/Usuarios/:id/foto",
-        obj_UsuarioController.consultarFotoPerfil()
-    );
-
-    aplicacao.patch(
-        "/Usuarios/:id/pinBatalha",
-        obj_UsuarioController.atualizarPinBatalha()
-    );
-
-    aplicacao.put(
-        "/Usuarios/resultado-batalha",
-        obj_UsuarioController.resultadoBatalha()
-    );
-
-    aplicacao.delete(
-        "/Usuarios/:id",
-        obj_UsuarioController.excluirUsuario()
-    );
-
-    aplicacao.patch(
-        "/Usuarios/:id/foto",
-        upload.single("foto"),
-        obj_UsuarioController.atualizarFotoPerfil()
-    );
-
-};
+module.exports = router;
