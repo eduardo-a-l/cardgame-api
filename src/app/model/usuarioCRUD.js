@@ -64,7 +64,7 @@ class UsuarioCRUD {
               "'" +
               usuario.senha +
               "'," +
-              "0," +
+              "1000," +
               "100," +
               "0," +
               "0," +
@@ -80,39 +80,19 @@ class UsuarioCRUD {
             var sqlInventario =
               "INSERT INTO CARDGAME.INVENTARIO " +
               "(IDUSUARIO, IDCARTA) VALUES " +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",4)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",4)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",5)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",6)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",7)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",8)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",8)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",9)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",9)," +
-              "(" +
-              usuarioInserido.idUsuario +
-              ",10)";
+              "(" + usuarioInserido.idUsuario + ",4)," +
+              "(" + usuarioInserido.idUsuario + ",4)," +
+              "(" + usuarioInserido.idUsuario + ",5)," +
+              "(" + usuarioInserido.idUsuario + ",6)," +
+              "(" + usuarioInserido.idUsuario + ",7)," +
+              "(" + usuarioInserido.idUsuario + ",8)," +
+              "(" + usuarioInserido.idUsuario + ",8)," +
+              "(" + usuarioInserido.idUsuario + ",9)," +
+              "(" + usuarioInserido.idUsuario + ",9)," +
+              "(" + usuarioInserido.idUsuario + ",10)";
 
             console.log(
-              "INSERT das cartas iniciais no inventário = " + sqlInventario,
+              "INSERT das cartas iniciais no inventário = " + sqlInventario
             );
 
             await transacao.request().query(sqlInventario);
@@ -272,54 +252,58 @@ class UsuarioCRUD {
           try {
             await transacao.begin();
 
-            const vencedor = await transacao
+            const resVencedor = await transacao
               .request()
               .query(
-                "SELECT * FROM CARDGAME.USUARIO " +
-                  "WHERE IDUSUARIO = " +
-                  idVencedor,
+                "SELECT * FROM CARDGAME.USUARIO WHERE IDUSUARIO = " + idVencedor
               );
 
-            const perdedor = await transacao
+            const resPerdedor = await transacao
               .request()
               .query(
-                "SELECT * FROM CARDGAME.USUARIO " +
-                  "WHERE IDUSUARIO = " +
-                  idPerdedor,
+                "SELECT * FROM CARDGAME.USUARIO WHERE IDUSUARIO = " + idPerdedor
               );
 
             if (
-              vencedor.recordset.length === 0 ||
-              perdedor.recordset.length === 0
+              resVencedor.recordset.length === 0 ||
+              resPerdedor.recordset.length === 0
             ) {
               await transacao.rollback();
               return reject("Um ou ambos os usuários não foram encontrados");
             }
 
-            await transacao
-              .request()
-              .query(
-                "UPDATE CARDGAME.USUARIO SET " +
-                  "PONTOS = PONTOS + 10, " +
-                  "MOEDAS = MOEDAS + 50, " +
-                  "VITORIAS = VITORIAS + 1 " +
-                  "WHERE IDUSUARIO = " +
-                  idVencedor,
-              );
+            const dadosVencedor = resVencedor.recordset[0];
+            const dadosPerdedor = resPerdedor.recordset[0];
 
-            await transacao
-              .request()
-              .query(
-                "UPDATE CARDGAME.USUARIO SET " +
-                  "MOEDAS = MOEDAS + 10, " +
-                  "DERROTAS = DERROTAS + 1 " +
-                  "WHERE IDUSUARIO = " +
-                  idPerdedor,
-              );
+            const RA = dadosVencedor.Pontos;
+            const RB = dadosPerdedor.Pontos;
+
+            const K = 50;
+
+            const EA = 1 / (1 + Math.pow(10, (RB - RA) / 400));
+
+            const ganhoVencedor = Math.round(K * (1 - EA));
+            const perdaPerdedor = ganhoVencedor;
+
+            await transacao.request().query(
+              `UPDATE CARDGAME.USUARIO SET ` +
+                `PONTOS = PONTOS + ${ganhoVencedor}, ` +
+                `MOEDAS = MOEDAS + 50, ` +
+                `VITORIAS = VITORIAS + 1 ` +
+                `WHERE IDUSUARIO = ${idVencedor}`
+            );
+
+            await transacao.request().query(
+              `UPDATE CARDGAME.USUARIO SET ` +
+                `PONTOS = PONTOS - ${perdaPerdedor}, ` +
+                `MOEDAS = MOEDAS + 10, ` +
+                `DERROTAS = DERROTAS + 1 ` +
+                `WHERE IDUSUARIO = ${idPerdedor}`
+            );
 
             await transacao.commit();
 
-            resolve();
+            resolve({ ganhoVencedor, perdaPerdedor });
           } catch (erro) {
             console.log(erro);
 
@@ -351,7 +335,7 @@ class UsuarioCRUD {
             var resultadoUsuario = await transacao
               .request()
               .query(
-                "SELECT * FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id,
+                "SELECT * FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id
               );
 
             if (resultadoUsuario.recordset.length === 0) {
@@ -368,19 +352,19 @@ class UsuarioCRUD {
                   "FROM CARDGAME.INVENTARIO " +
                   "WHERE IDUSUARIO = " +
                   id +
-                  ")",
+                  ")"
               );
 
             await transacao
               .request()
               .query(
-                "DELETE FROM CARDGAME.INVENTARIO " + "WHERE IDUSUARIO = " + id,
+                "DELETE FROM CARDGAME.INVENTARIO " + "WHERE IDUSUARIO = " + id
               );
 
             await transacao
               .request()
               .query(
-                "DELETE FROM CARDGAME.BARALHO " + "WHERE IDUSUARIO = " + id,
+                "DELETE FROM CARDGAME.BARALHO " + "WHERE IDUSUARIO = " + id
               );
 
             await transacao
@@ -388,13 +372,13 @@ class UsuarioCRUD {
               .query(
                 "DELETE FROM CARDGAME.COMPRAUSUARIO " +
                   "WHERE IDUSUARIO = " +
-                  id,
+                  id
               );
 
             await transacao
               .request()
               .query(
-                "DELETE FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id,
+                "DELETE FROM CARDGAME.USUARIO " + "WHERE IDUSUARIO = " + id
               );
 
             await transacao.commit();
@@ -421,64 +405,64 @@ class UsuarioCRUD {
 
   atualizaFotoPerfil(id, imagem, tipoImagem) {
     return new Promise((resolve, reject) => {
-        this._db
-            .then((pool) => {
-                pool
-                    .request()
-                    .input("id", mssql.Int, id)
-                    .input("imagem", mssql.VarBinary(mssql.MAX), imagem)
-                    .input("tipoImagem", mssql.VarChar(50), tipoImagem)
-                    .query(
-                        "UPDATE CARDGAME.USUARIO " +
-                        "SET FotoPerfil = @imagem, " +
-                        "TipoFotoPerfil = @tipoImagem " +
-                        "WHERE IDUSUARIO = @id",
-                        function (erro, resultados) {
-                            if (erro) {
-                                console.log(erro);
-                                return reject(
-                                    "Atualização da foto de perfil falhou"
-                                );
-                            }
+      this._db
+        .then((pool) => {
+          pool
+            .request()
+            .input("id", mssql.Int, id)
+            .input("imagem", mssql.VarBinary(mssql.MAX), imagem)
+            .input("tipoImagem", mssql.VarChar(50), tipoImagem)
+            .query(
+              "UPDATE CARDGAME.USUARIO " +
+                "SET FotoPerfil = @imagem, " +
+                "TipoFotoPerfil = @tipoImagem " +
+                "WHERE IDUSUARIO = @id",
+              function (erro, resultados) {
+                if (erro) {
+                  console.log(erro);
+                  return reject(
+                    "Atualização da foto de perfil falhou"
+                  );
+                }
 
-                            if (resultados.rowsAffected[0] === 0) {
-                                return reject("Usuário não encontrado");
-                            }
+                if (resultados.rowsAffected[0] === 0) {
+                  return reject("Usuário não encontrado");
+                }
 
-                            resolve();
-                        }
-                    );
-            })
-            .catch((erro) => {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
+                resolve();
+              }
+            );
+        })
+        .catch((erro) => {
+          console.log(erro);
+          reject("Erro na conexão com o banco de dados");
+        });
     });
   }
 
   consultaFotoPerfil(id) {
     return new Promise((resolve, reject) => {
-        var sql =
-            "SELECT FotoPerfil, TipoFotoPerfil " +
-            "FROM CARDGAME.USUARIO " +
-            "WHERE IDUSUARIO = " +
-            id;
+      var sql =
+        "SELECT FotoPerfil, TipoFotoPerfil " +
+        "FROM CARDGAME.USUARIO " +
+        "WHERE IDUSUARIO = " +
+        id;
 
-        this._db
-            .then((pool) => {
-                pool.request().query(sql, function (erro, resultados) {
-                    if (erro) {
-                        console.log(erro);
-                        return reject("Erro ao consultar foto de perfil");
-                    }
+      this._db
+        .then((pool) => {
+          pool.request().query(sql, function (erro, resultados) {
+            if (erro) {
+              console.log(erro);
+              return reject("Erro ao consultar foto de perfil");
+            }
 
-                    resolve(resultados);
-                });
-            })
-            .catch((erro) => {
-                console.log(erro);
-                reject("Erro na conexão com o banco de dados");
-            });
+            resolve(resultados);
+          });
+        })
+        .catch((erro) => {
+          console.log(erro);
+          reject("Erro na conexão com o banco de dados");
+        });
     });
   }
 }
