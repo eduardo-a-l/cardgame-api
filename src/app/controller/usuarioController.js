@@ -8,7 +8,7 @@ class UsuarioController {
                 const usuarioCRUD = new UsuarioCRUD(db);
                 const resultados = await usuarioCRUD.listagemUsuarios();
 
-                return response.json(resultados.recordset);
+                return response.json(resultados);
             } catch (erro) {
                 console.error(erro);
                 return response.status(500).json({
@@ -72,7 +72,7 @@ class UsuarioController {
                 const usuarioCRUD = new UsuarioCRUD(db);
                 const resultados = await usuarioCRUD.rankingUsuarios();
 
-                return response.json(resultados.recordset);
+                return response.json(resultados);
             } catch (erro) {
                 console.error(erro);
                 return response.status(500).json({
@@ -90,11 +90,13 @@ class UsuarioController {
 
                 const resultados = await usuarioCRUD.consultaUsuarioPorId(idDoUsuario);
 
-                if (!resultados.recordset || resultados.recordset.length === 0) {
-                    return response.status(404).end();
+                if (!resultados || resultados.length === 0) {
+                    return response.status(404).json({
+                        erro: "Usuário não encontrado"
+                    });
                 }
 
-                return response.json(resultados.recordset[0]);
+                return response.json(resultados[0]);
             } catch (erro) {
                 console.error(erro);
                 return response.status(500).json({
@@ -223,18 +225,18 @@ class UsuarioController {
 
                 const resultados = await usuarioCRUD.consultaFotoPerfil(id);
 
-                if (!resultados.recordset || resultados.recordset.length === 0) {
+                if (!resultados || resultados.length === 0) {
                     return response.status(404).end();
                 }
 
-                const usuario = resultados.recordset[0];
+                const usuario = resultados[0];
 
-                if (!usuario.FotoPerfil) {
+                if (!usuario.fotoPerfil) {
                     return response.status(404).end();
                 }
 
-                response.set("Content-Type", usuario.TipoFotoPerfil);
-                return response.send(usuario.FotoPerfil);
+                response.set("Content-Type", usuario.tipoFotoPerfil);
+                return response.send(usuario.fotoPerfil);
             } catch (erro) {
                 console.error(erro);
                 return response.status(500).json({
