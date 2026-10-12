@@ -24,20 +24,20 @@ class BaralhoController {
                         baralhos.push(baralho);
                     }
 
-                    if (linha.IdInventario !== null && linha.IdInventario !== undefined) {
+                    if (linha.idInventario !== null && linha.idInventario !== undefined) {
                         baralho.Inventarios.push({
-                            IdInventario: linha.IdInventario,
-                            IdUsuario: linha.IdUsuario,
-                            IdCarta: linha.IdCarta,
+                            idInventario: linha.idInventario,
+                            idUsuario: linha.idUsuario,
+                            idCarta: linha.idCarta,
                             Carta: {
-                                IdCarta: linha.Carta_IdCarta,
-                                Nome: linha.Carta_Nome,
-                                Tipo: linha.Carta_Tipo,
-                                Raridade: linha.Carta_Raridade,
-                                PrecoPadrao: linha.Carta_PrecoPadrao,
-                                Vida: linha.Carta_Vida,
-                                Acao1: linha.Carta_Acao1,
-                                Acao2: linha.Carta_Acao2
+                                idCarta: linha.idCarta,
+                                nome: linha.Carta_Nome,
+                                tipo: linha.Carta_Tipo,
+                                raridade: linha.Carta_Raridade,
+                                precoPadrao: linha.Carta_PrecoPadrao,
+                                vida: linha.Carta_Vida,
+                                acao1: linha.Carta_Acao1,
+                                acao2: linha.Carta_Acao2
                             }
                         });
                     }
