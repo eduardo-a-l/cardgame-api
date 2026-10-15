@@ -43,6 +43,39 @@ class LojaCRUD {
         }
     }
 
+    async listagemPacotes() {
+        try {
+            const pool = await this._db;
+            const request = pool.request();
+
+            const sql = `
+                SELECT
+                    P.idPacote,
+                    P.raridade,
+                    P.preco,
+                    P.descricao,
+                    JSON_QUERY((
+                        SELECT
+                            PC.raridade,
+                            PC.[chanceCartas1a4] AS chanceCartas,
+                            PC.chanceCarta5 AS chanceUltimaCarta
+                        FROM CARDGAME.PacoteChance PC
+                        WHERE PC.idPacote = P.idPacote
+                        FOR JSON PATH 
+                    )) AS probabilidades
+                FROM CARDGAME.Pacote P
+            `;
+
+            const resultado = await request.query(sql);
+            return resultado.recordset;
+        } catch (erro) {
+            console.error("Erro original ao listar pacotes:", erro);
+            throw new Error(
+                `Listagem dos pacotes falhou: ${erro.message}`
+            );
+        }
+    }
+
     async comprarItem(userId, idLojaItem) {
         const pool = await this._db;
         const transacao = new mssql.Transaction(pool);

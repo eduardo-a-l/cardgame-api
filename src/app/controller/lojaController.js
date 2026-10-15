@@ -20,6 +20,23 @@ class LojaController {
         };
     }
 
+    listagemPacotes() {
+        return async (request, response) => {
+            try {
+                const lojaCRUD = new LojaCRUD(db);
+                const resultado = await lojaCRUD.listagemPacotes();
+
+                return response.status(200).json(resultado);
+            } catch (erro) {
+                console.error(erro);
+
+                return response.status(500).json({
+                    erro: "Erro ao listar pacotes"
+                });
+            }
+        };
+    }
+
     comprarItem() {
         return async (request, response) => {
             try {
