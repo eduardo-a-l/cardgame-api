@@ -20,6 +20,23 @@ class LojaController {
         };
     }
 
+    listagemPacotes() {
+        return async (request, response) => {
+            try {
+                const lojaCRUD = new LojaCRUD(db);
+                const resultado = await lojaCRUD.listagemPacotes();
+
+                return response.status(200).json(resultado);
+            } catch (erro) {
+                console.error(erro);
+
+                return response.status(500).json({
+                    erro: "Erro ao listar pacotes"
+                });
+            }
+        };
+    }
+
     comprarItem() {
         return async (request, response) => {
             try {
@@ -51,6 +68,41 @@ class LojaController {
             }
         };
     }
+
+    comprarPacote() {
+        return async (request, response) => {
+            try {
+                const { userId, idPacote } = request.params;
+                const lojaCRUD = new LojaCRUD(db);
+
+                const resultado = await lojaCRUD.comprarPacote(userId, idPacote);
+
+                return response.status(200).json(resultado);
+            } catch (erro) {
+                console.error(erro);
+
+                const mensagemErro = erro.message || erro;
+
+                if (mensagemErro === "Usuário ou pacote não encontrado") {
+                    return response.status(404).json({ erro: mensagemErro });
+                }
+
+                if ( mensagemErro === "Saldo insuficiente" || mensagemErro === "Pacote sem probabilidades cadastradas" ||
+                    mensagemErro === "As probabilidades do pacote devem somar 100%" || mensagemErro === "Não foi possível sortear a raridade" ) {
+                    return response.status(400).json({
+                        erro: mensagemErro
+                    });
+                }
+
+                if ( mensagemErro.startsWith( "Não existem cartas cadastradas com raridade" )) {
+                    return response.status(400).json({ erro: mensagemErro });
+                }
+
+                return response.status(500).json({ erro: "Erro ao realizar compra do pacote" });
+            }
+        };
+    }
+
 
     venderCarta() {
         return async (request, response) => {
