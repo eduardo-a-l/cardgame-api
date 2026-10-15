@@ -31,7 +31,8 @@ class LojaCRUD {
           AND (L.ehOferta = 0 OR L.idLojaItem NOT IN (
             SELECT C2.idLojaItem 
             FROM CARDGAME.CompraUsuario C2 
-            WHERE C2.idUsuario = @idUsuario
+            WHERE C2.idUsuario = @idUsuario 
+            AND C2.idLojaItem != 0
           ))
       `;
 
@@ -162,6 +163,164 @@ class LojaCRUD {
                 mensagem: "Compra realizada.",
                 precoPago: precoFinal,
                 novoSaldo: usuario.moedas - precoFinal
+            };
+        } catch (erro) {
+            console.error(erro);
+            try {
+                await transacao.rollback();
+            } catch (e) { }
+            throw new Error(erro.message || "Erro ao processar a compra");
+        }
+    }
+
+    async comprarPacote(userId, idPacote) {
+        const pool = await this._db;
+        const transacao = new mssql.Transaction(pool);
+
+        try {
+            await transacao.begin();
+
+            const reqUser = transacao.request();
+            reqUser.input("userId", mssql.Int, userId);
+            const resUser = await reqUser.query(
+                "SELECT idUsuario, moedas FROM CARDGAME.Usuario WHERE idUsuario = @userId"
+            );
+
+            const reqPacote = transacao.request();
+            reqPacote.input("idPacote", mssql.Int, idPacote);
+            const resPacote = await reqPacote.query(
+                `SELECT 
+                    idPacote,
+                    preco
+                FROM CARDGAME.Pacote
+                WHERE idPacote = @idPacote`
+            );
+
+            if (resUser.recordset.length === 0 || resPacote.recordset.length === 0) {
+                await transacao.rollback();
+                throw new Error("Usuário ou pacote não encontrado");
+            }
+
+            const usuario = resUser.recordset[0];
+            const pacote = resPacote.recordset[0];
+
+            const preco = pacote.preco;
+
+            if (usuario.moedas < preco) {
+                await transacao.rollback();
+                throw new Error("Saldo insuficiente");
+            }
+
+            const reqProbabilidades = transacao.request();
+            reqProbabilidades.input("idPacote", mssql.Int, idPacote);
+
+            const resProbabilidades = await reqProbabilidades.query(`
+                SELECT
+                    raridade,
+                    chanceCartas1a4,
+                    chanceCarta5
+                FROM CARDGAME.PacoteChance
+                WHERE idPacote = @idPacote
+            `);
+
+            const probabilidades = resProbabilidades.recordset;
+
+            if (probabilidades.length === 0) {
+                throw new Error("Pacote sem probabilidades cadastradas");
+            }
+
+            const totalCartas1a4 = probabilidades.reduce(
+                (total, p) => total + Number(p.chanceCartas1a4),
+                0
+            );
+
+            const totalCarta5 = probabilidades.reduce(
+                (total, p) => total + Number(p.chanceCarta5),
+                0
+            );
+
+            if (
+                Math.abs(totalCartas1a4 - 1) > 0.0001 ||
+                Math.abs(totalCarta5 - 1) > 0.0001
+            ) {
+                throw new Error("As probabilidades do pacote devem somar 100%");
+            }
+            
+            const cartasSorteadas = [];
+
+            for (let i = 0; i < 5; i++) {
+                const colunaChance =
+                    i === 4 ? "chanceCarta5" : "chanceCartas1a4";
+
+                const sorteio = Math.random();
+                let acumulado = 0;
+                let raridadeSorteada = null;
+
+                for (const p of probabilidades) {
+                    acumulado += Number(p[colunaChance]);
+
+                    if (sorteio < acumulado) {
+                        raridadeSorteada = p.raridade;
+                        break;
+                    }
+                }
+
+                if (!raridadeSorteada) {
+                    throw new Error("Não foi possível sortear a raridade");
+                }
+
+                
+                const reqCarta = transacao.request();
+                reqCarta.input("raridade", mssql.NVarChar, raridadeSorteada);
+
+                const resCarta = await reqCarta.query(`
+                    SELECT TOP 1 idCarta, nome, raridade
+                    FROM CARDGAME.Carta
+                    WHERE raridade = @raridade
+                    ORDER BY NEWID()
+                `);
+
+                if (resCarta.recordset.length === 0) {
+                    throw new Error(
+                        `Não existem cartas cadastradas com raridade ${raridadeSorteada}`
+                    );
+                }
+
+                const carta = resCarta.recordset[0];
+                
+                const reqInventario = transacao.request();
+                reqInventario.input("userId", mssql.Int, userId);
+                reqInventario.input("idCarta", mssql.Int, carta.idCarta);
+
+                await reqInventario.query(`
+                    INSERT INTO CARDGAME.Inventario (idUsuario, idCarta)
+                    VALUES (@userId, @idCarta)
+                `);
+
+                cartasSorteadas.push(carta);
+            }
+
+            const reqUpdateMoedas = transacao.request();
+            reqUpdateMoedas.input("preco", mssql.Int, preco);
+            reqUpdateMoedas.input("userId", mssql.Int, userId);
+            await reqUpdateMoedas.query(
+                "UPDATE CARDGAME.Usuario SET moedas = moedas - @preco WHERE idUsuario = @userId"
+            );
+
+            const reqInsertCompra = transacao.request();
+            reqInsertCompra.input("userId", mssql.Int, userId);
+            reqInsertCompra.input("idPacote", mssql.Int, idPacote);
+            await reqInsertCompra.query(
+                "INSERT INTO CARDGAME.CompraUsuario (idUsuario, idPacote, dataCompra) VALUES (@userId, @idPacote, GETDATE())"
+            );
+
+            await transacao.commit();
+
+            return {
+                mensagem: "Compra realizada.",
+                precoPago: preco,
+                novoSaldo: usuario.moedas - preco,
+                cartas: cartasSorteadas
             };
         } catch (erro) {
             console.error(erro);
