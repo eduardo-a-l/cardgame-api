@@ -107,10 +107,10 @@ class LojaController {
     venderCarta() {
         return async (request, response) => {
             try {
-                const { userId, idCarta } = request.params;
+                const { userId, idInventario } = request.params;
                 const lojaCRUD = new LojaCRUD(db);
 
-                const resultado = await lojaCRUD.venderCarta(userId, idCarta);
+                const resultado = await lojaCRUD.venderCarta(userId, idInventario);
                 return response.status(200).json(resultado);
             } catch (erro) {
                 console.error(erro);
@@ -121,8 +121,12 @@ class LojaController {
                     return response.status(404).json({ erro: mensagemErro });
                 }
 
-                if (mensagemErro === "Você não possui essa carta no inventário") {
-                    return response.status(400).json({ Mensagem: mensagemErro });
+                if (
+                    mensagemErro === "Você não possui essa carta no inventário" ||
+                    mensagemErro.includes("baralho") ||
+                    mensagemErro.includes("equipada")
+                ) {
+                    return response.status(400).json({ erro: mensagemErro });
                 }
 
                 return response.status(500).json({

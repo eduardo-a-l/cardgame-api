@@ -26,7 +26,7 @@ class CartaController {
 
                 const resultados = await cartaCRUD.consultaCartaPorId(idDaCarta);
 
-                if (!resultados || resultados.length === 0) {
+                if (!resultados) {
                     return response.status(404).json({ erro: "Carta não encontrada" });
                 }
 

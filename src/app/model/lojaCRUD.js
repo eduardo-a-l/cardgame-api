@@ -331,7 +331,7 @@ class LojaCRUD {
         }
     }
 
-    async venderCarta(userId, idCarta) {
+    async venderCarta(userId, idInventario) {
         const pool = await this._db;
         const transacao = new mssql.Transaction(pool);
 
@@ -351,16 +351,16 @@ class LojaCRUD {
 
             const reqInv = transacao.request();
             reqInv.input("userId", mssql.Int, userId);
-            reqInv.input("idCarta", mssql.Int, idCarta);
+            reqInv.input("idInventario", mssql.Int, idInventario);
             const resInv = await reqInv.query(
-                `SELECT TOP 1 
-          I.idInventario,
-          I.idUsuario,
-          I.idCarta,
-          C.precoPadrao 
-        FROM CARDGAME.Inventario I 
-        INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta 
-        WHERE I.idUsuario = @userId AND I.idCarta = @idCarta`
+                `SELECT 
+                    I.idInventario,
+                    I.idUsuario,
+                    I.idCarta,
+                    C.precoPadrao 
+                FROM CARDGAME.Inventario I 
+                INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta 
+                WHERE I.idUsuario = @userId AND I.idInventario = @idInventario`
             );
 
             if (resInv.recordset.length === 0) {
