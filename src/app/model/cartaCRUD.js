@@ -145,22 +145,29 @@ class CartaCRUD {
             request.input("idUsuario", mssql.Int, idUsuario);
 
             const sql = `
-        SELECT 
-          I.idInventario,
-          I.idUsuario,
-          C.idCarta,
-          C.nome,
-          C.tipo,
-          C.raridade,
-          C.precoPadrao,
-          C.vida,
-          C.acao1,
-          C.acao2
-        FROM CARDGAME.Inventario I
-        INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta
-        WHERE I.idUsuario = @idUsuario
-        ORDER BY I.idInventario
-      `;
+                SELECT 
+                    I.idInventario,
+                    I.idUsuario,
+                    I.idCarta,
+                    C.Nome AS nome,
+                    C.Tipo AS tipo,
+                    C.Raridade AS raridade,
+                    C.PrecoPadrao AS precoPadrao,
+                    C.Vida AS vida,
+                    C.Acao1 AS acao1,
+                    C.Acao2 AS acao2,
+                    CASE 
+                        WHEN EXISTS (
+                            SELECT 1 
+                            FROM CARDGAME.Carta_Baralho CB 
+                            WHERE CB.idInventario = I.idInventario
+                        ) THEN 1 
+                        ELSE 0 
+                    END AS emBaralho
+                FROM CARDGAME.Inventario I
+                INNER JOIN CARDGAME.Carta C ON I.idCarta = C.idCarta
+                WHERE I.idUsuario = @idUsuario
+            `;
 
             const resultado = await request.query(sql);
             return resultado.recordset;
